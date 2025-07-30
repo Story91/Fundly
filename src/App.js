@@ -238,7 +238,7 @@ function App() {
   console.log('campaignData.campaigns:', campaignData.campaigns);
   console.log('campaignData.campaigns.length:', campaignData.campaigns?.length);
   
-  // Show real campaigns first, then add demo campaigns
+  // Demo campaigns for non-logged users and examples
   const demoCampaigns = [
     {
       id: 'demo-1',
@@ -267,16 +267,39 @@ function App() {
       category: "Technology",
       status: "Active",
       isDemo: true // Mark as demo campaign
+    },
+    {
+      id: 'demo-3',
+      title: "Educational Gaming App for Kids",
+      description: "Interactive learning platform that makes education fun through gamification.",
+      image: "https://images.unsplash.com/photo-1596464716127-f2a82984de30?w=400&h=300&fit=crop",
+      creator: "EduPlay Studios",
+      raised: 28750,
+      goal: 40000,
+      backers: 156,
+      daysLeft: 8,
+      category: "Education",
+      status: "Active",
+      isDemo: true
     }
   ];
 
-  // Combine real campaigns with demo campaigns
-  const campaigns = [...campaignData.campaigns, ...demoCampaigns];
+  // Show different campaigns based on login status
+  const campaigns = isSignedIn 
+    ? [...campaignData.campaigns, ...demoCampaigns.slice(0, 2)] // Real + 2 demo when logged in
+    : demoCampaigns; // Only demo campaigns when not logged in
   
-  console.log('✅ REAL + DEMO CAMPAIGNS');
-  console.log('Real campaigns count:', campaignData.campaigns.length);
-  console.log('Demo campaigns count:', demoCampaigns.length);
-  console.log('Total campaigns:', campaigns.length);
+  console.log('✅ CAMPAIGN DISPLAY LOGIC');
+  console.log('User logged in:', isSignedIn);
+  if (isSignedIn) {
+    console.log('Showing: Real campaigns + 2 demo');
+    console.log('Real campaigns count:', campaignData.campaigns.length);
+    console.log('Demo campaigns shown:', demoCampaigns.slice(0, 2).length);
+  } else {
+    console.log('Showing: Only demo campaigns (user not logged in)');
+    console.log('Demo campaigns shown:', demoCampaigns.length);
+  }
+  console.log('Total campaigns displayed:', campaigns.length);
 
   // Filter campaigns based on status
   const getFilteredCampaigns = () => {
@@ -1367,6 +1390,33 @@ function App() {
             </div>
           )}
 
+          {/* Demo Banner for non-logged users */}
+          {!isSignedIn && (
+            <div style={{
+              ...styles.card,
+              padding: '20px',
+              textAlign: 'center',
+              marginBottom: '20px',
+              background: dark 
+                ? 'linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(147, 51, 234, 0.1))'
+                : 'linear-gradient(135deg, rgba(59, 130, 246, 0.05), rgba(147, 51, 234, 0.05))',
+              border: `1px solid ${dark ? 'rgba(59, 130, 246, 0.3)' : 'rgba(59, 130, 246, 0.2)'}`,
+              borderRadius: '16px'
+            }}>
+              <div style={{ fontSize: '16px', marginBottom: '12px' }}>
+                🎭 <strong>Demo Campaigns</strong>
+              </div>
+              <div style={{ fontSize: '14px', marginBottom: '16px', opacity: 0.8, lineHeight: '1.5' }}>
+                These are example campaigns to showcase our platform. 
+                <br />
+                <strong>Sign in with Base Account</strong> to see real campaigns and create your own!
+              </div>
+              <div style={{ fontSize: '12px', opacity: 0.7 }}>
+                🚫 BasePay is disabled for demo campaigns
+              </div>
+            </div>
+          )}
+
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%', maxWidth: '900px' }}>
             {filteredCampaigns.map(campaign => (
               <div key={campaign.id} style={{
@@ -1557,6 +1607,23 @@ function App() {
                 </div>
               </div>
             ))}
+            
+            {/* Info banner for logged users about demo campaigns */}
+            {isSignedIn && campaignData.campaigns.length > 0 && (
+              <div style={{
+                ...styles.card,
+                padding: '12px 16px',
+                textAlign: 'center',
+                marginTop: '10px',
+                backgroundColor: dark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)',
+                border: `1px dashed ${dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
+                borderRadius: '8px'
+              }}>
+                <div style={{ fontSize: '11px', opacity: 0.7 }}>
+                  🎭 Demo campaigns shown above for platform showcase
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
