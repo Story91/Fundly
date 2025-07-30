@@ -7,7 +7,7 @@ function App() {
   const [paymentStatus, setPaymentStatus] = useState('');
   const [paymentId, setPaymentId] = useState('');
   const [theme, setTheme] = useState('light');
-  
+
   // Sub Account states
   const [subAccount, setSubAccount] = useState(null);
   const [hasSubAccount, setHasSubAccount] = useState(false);
@@ -50,7 +50,7 @@ function App() {
   // Initialize SDK
   const sdk = createBaseAccountSDK({
     appName: 'Fundly - Crowdfunding Platform',
-    appLogo: 'https://base.org/logo.png',
+      appLogo: 'https://base.org/logo.png',
   });
 
   // Mock crowdfunding campaigns data
@@ -627,8 +627,8 @@ function App() {
               fontSize: '24px'
             }}
           >
-            {theme === 'light' ? '🌙' : '☀️'}
-          </button>
+        {theme === 'light' ? '🌙' : '☀️'}
+      </button>
           {!isSignedIn && (
             <SignInWithBaseButton 
               align="center"
@@ -651,7 +651,7 @@ function App() {
           
           {isSignedIn ? (
             <div>
-              <div style={styles.card}>
+      <div style={styles.card}>
                 <div style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '8px' }}>
                   🏦 Main Account
                 </div>
@@ -724,13 +724,13 @@ function App() {
                 <div style={{ fontSize: '14px', marginBottom: '16px' }}>
                   Connect your wallet to start donating
                 </div>
-                <SignInWithBaseButton 
-                  align="center"
-                  variant="solid"
-                  colorScheme={theme}
-                  size="medium"
-                  onClick={handleSignIn}
-                />
+          <SignInWithBaseButton 
+            align="center"
+            variant="solid"
+            colorScheme={theme}
+            size="medium"
+            onClick={handleSignIn}
+          />
               </div>
             </div>
           )}
@@ -927,8 +927,8 @@ function App() {
                                 ${getAmountForCampaign(campaign.id)} USDC
                               </span>
                             </div>
-                            <BasePayButton 
-                              colorScheme={theme}
+          <BasePayButton 
+            colorScheme={theme}
                               onClick={() => handleBasePay(campaign)}
                               style={{
                                 fontSize: '11px',
@@ -997,346 +997,628 @@ function App() {
           left: 0,
           right: 0,
           bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.7)',
+          backgroundColor: 'rgba(0,0,0,0.8)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          zIndex: 1000
+          zIndex: 1000,
+          padding: '20px'
         }}>
           <div style={{
-            ...styles.card,
-            width: '500px',
-            maxWidth: '90vw',
-            maxHeight: '80vh',
-            overflow: 'auto'
+            backgroundColor: dark ? '#1e293b' : 'white',
+            borderRadius: '24px',
+            width: '100%',
+            maxWidth: '600px',
+            maxHeight: '90vh',
+            overflow: 'auto',
+            position: 'relative',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+            border: dark ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.1)'
           }}>
-            <h2 style={{ marginTop: 0, fontSize: '24px', marginBottom: '20px' }}>
-              🚀 Create New Campaign
-            </h2>
-            
-            <div style={{ marginBottom: '16px' }}>
-              <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600' }}>
-                Campaign Title *
-              </label>
-              <input
-                type="text"
-                value={newCampaign.title}
-                onChange={(e) => setNewCampaign(prev => ({ ...prev, title: e.target.value }))}
-                placeholder="e.g., Revolutionary Solar Panel Technology"
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  borderRadius: '8px',
-                  border: `1px solid ${dark ? '#555' : '#ddd'}`,
-                  backgroundColor: dark ? 'rgba(255,255,255,0.1)' : 'white',
-                  color: dark ? 'white' : 'black',
-                  fontSize: '14px'
-                }}
-              />
+            {/* Header */}
+            <div style={{
+              padding: '32px 32px 0 32px',
+              borderBottom: `1px solid ${dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
+              marginBottom: '32px'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                <h2 style={{ 
+                  margin: 0, 
+                  fontSize: '28px', 
+                  fontWeight: '700',
+                  background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text'
+                }}>
+                  🚀 Create New Campaign
+                </h2>
+                <button
+                  onClick={() => setShowCreateModal(false)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    fontSize: '28px',
+                    cursor: 'pointer',
+                    color: dark ? '#94a3b8' : '#64748b',
+                    padding: '8px',
+                    borderRadius: '12px',
+                    transition: 'all 0.2s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.backgroundColor = dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.backgroundColor = 'transparent';
+                  }}
+                >
+                  ✕
+                </button>
+              </div>
             </div>
 
-            <div style={{ marginBottom: '16px' }}>
-              <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600' }}>
-                Description *
-              </label>
-              <textarea
-                value={newCampaign.description}
-                onChange={(e) => setNewCampaign(prev => ({ ...prev, description: e.target.value }))}
-                placeholder="Describe your campaign, what you're building, and why people should support you..."
-                rows={4}
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  borderRadius: '8px',
-                  border: `1px solid ${dark ? '#555' : '#ddd'}`,
-                  backgroundColor: dark ? 'rgba(255,255,255,0.1)' : 'white',
-                  color: dark ? 'white' : 'black',
-                  fontSize: '14px',
-                  resize: 'vertical'
-                }}
-              />
-            </div>
-
-            <div style={{ display: 'flex', gap: '16px', marginBottom: '16px' }}>
-              <div style={{ flex: 1 }}>
-                <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600' }}>
-                  Goal Amount (USDC) *
+            {/* Form Content */}
+            <div style={{ padding: '0 32px 32px 32px' }}>
+              {/* Campaign Title */}
+              <div style={{ marginBottom: '24px' }}>
+                <label style={{ 
+                  display: 'block', 
+                  marginBottom: '12px', 
+                  fontSize: '16px', 
+                  fontWeight: '600',
+                  color: dark ? '#f1f5f9' : '#1e293b'
+                }}>
+                  Campaign Title *
                 </label>
                 <input
-                  type="number"
-                  value={newCampaign.goal}
-                  onChange={(e) => setNewCampaign(prev => ({ ...prev, goal: e.target.value }))}
-                  placeholder="50000"
+                  type="text"
+                  value={newCampaign.title}
+                  onChange={(e) => setNewCampaign(prev => ({ ...prev, title: e.target.value }))}
+                  placeholder="e.g., Revolutionary Solar Panel Technology"
                   style={{
                     width: '100%',
-                    padding: '12px',
-                    borderRadius: '8px',
-                    border: `1px solid ${dark ? '#555' : '#ddd'}`,
-                    backgroundColor: dark ? 'rgba(255,255,255,0.1)' : 'white',
-                    color: dark ? 'white' : 'black',
-                    fontSize: '14px'
+                    padding: '16px 20px',
+                    borderRadius: '16px',
+                    border: `2px solid ${dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
+                    backgroundColor: dark ? 'rgba(255,255,255,0.05)' : '#f8fafc',
+                    color: dark ? '#f1f5f9' : '#1e293b',
+                    fontSize: '16px',
+                    fontWeight: '500',
+                    transition: 'all 0.3s ease',
+                    outline: 'none',
+                    boxSizing: 'border-box'
+                  }}
+                  onFocus={(e) => {
+                    e.target.style.borderColor = '#2563eb';
+                    e.target.style.boxShadow = '0 0 0 4px rgba(37, 99, 235, 0.1)';
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
+                    e.target.style.boxShadow = 'none';
                   }}
                 />
               </div>
 
-              <div style={{ flex: 1 }}>
-                <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600' }}>
-                  Category
+              {/* Description */}
+              <div style={{ marginBottom: '24px' }}>
+                <label style={{ 
+                  display: 'block', 
+                  marginBottom: '12px', 
+                  fontSize: '16px', 
+                  fontWeight: '600',
+                  color: dark ? '#f1f5f9' : '#1e293b'
+                }}>
+                  Description *
                 </label>
-                <select
-                  value={newCampaign.category}
-                  onChange={(e) => {
-                    setNewCampaign(prev => ({ ...prev, category: e.target.value }));
-                    // Refresh images if picker is open
-                    if (showImagePicker) {
-                      fetchUnsplashImages(e.target.value);
-                    }
-                  }}
+                <textarea
+                  value={newCampaign.description}
+                  onChange={(e) => setNewCampaign(prev => ({ ...prev, description: e.target.value }))}
+                  placeholder="Describe your campaign, what you're building, and why people should support you..."
+                  rows={4}
                   style={{
                     width: '100%',
-                    padding: '12px',
-                    borderRadius: '8px',
-                    border: `1px solid ${dark ? '#555' : '#ddd'}`,
-                    backgroundColor: dark ? 'rgba(255,255,255,0.1)' : 'white',
-                    color: dark ? 'white' : 'black',
-                    fontSize: '14px'
+                    padding: '16px 20px',
+                    borderRadius: '16px',
+                    border: `2px solid ${dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
+                    backgroundColor: dark ? 'rgba(255,255,255,0.05)' : '#f8fafc',
+                    color: dark ? '#f1f5f9' : '#1e293b',
+                    fontSize: '16px',
+                    fontWeight: '500',
+                    transition: 'all 0.3s ease',
+                    outline: 'none',
+                    resize: 'vertical',
+                    minHeight: '120px',
+                    fontFamily: 'inherit',
+                    boxSizing: 'border-box'
                   }}
-                >
-                  <option value="Technology">Technology</option>
-                  <option value="Environment">Environment</option>
-                  <option value="Education">Education</option>
-                  <option value="Culture">Culture</option>
-                  <option value="Health">Health</option>
-                  <option value="Dreams">Dreams</option>
-                  <option value="Goals">Goals</option>
-                </select>
+                  onFocus={(e) => {
+                    e.target.style.borderColor = '#2563eb';
+                    e.target.style.boxShadow = '0 0 0 4px rgba(37, 99, 235, 0.1)';
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
+                    e.target.style.boxShadow = 'none';
+                  }}
+                />
               </div>
-            </div>
 
-            <div style={{ marginBottom: '24px' }}>
-              <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600' }}>
-                Creator Nickname
-              </label>
-              <input
-                type="text"
-                value={newCampaign.creatorNickname}
-                onChange={(e) => setNewCampaign(prev => ({ ...prev, creatorNickname: e.target.value }))}
-                placeholder="Your public nickname (e.g., @yourname)"
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  borderRadius: '8px',
-                  border: `1px solid ${dark ? '#555' : '#ddd'}`,
-                  backgroundColor: dark ? 'rgba(255,255,255,0.1)' : 'white',
-                  color: dark ? 'white' : 'black',
-                  fontSize: '14px'
-                }}
-              />
-            </div>
-
-            {universalAddress && (
+              {/* Goal Amount and Category Row */}
               <div style={{ 
-                marginBottom: '24px',
-                padding: '12px',
-                borderRadius: '8px',
-                backgroundColor: dark ? 'rgba(0,255,0,0.1)' : 'rgba(34, 197, 94, 0.1)',
-                border: `1px solid ${dark ? 'rgba(0,255,0,0.3)' : 'rgba(34, 197, 94, 0.3)'}`
+                display: 'grid', 
+                gridTemplateColumns: '1fr 1fr', 
+                gap: '20px', 
+                marginBottom: '24px'
               }}>
-                <div style={{ fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>
-                  💼 Connected Wallet:
-                </div>
-                <div style={{ 
-                  fontSize: '12px', 
-                  fontFamily: 'monospace',
-                  color: dark ? '#4ade80' : '#16a34a'
-                }}>
-                  {universalAddress}
-                </div>
-                <div style={{ fontSize: '10px', opacity: 0.7, marginTop: '4px' }}>
-                  This address will receive the funds if your campaign is successful
-                </div>
-              </div>
-            )}
-
-            <div style={{ marginBottom: '24px' }}>
-              <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600' }}>
-                Campaign Image
-              </label>
-              
-              {newCampaign.image ? (
-                <div style={{ marginBottom: '12px' }}>
-                  <img 
-                    src={newCampaign.image}
-                    alt="Campaign preview"
-                    style={{
-                      width: '100%',
-                      height: '120px',
-                      objectFit: 'cover',
-                      borderRadius: '8px',
-                      marginBottom: '8px'
-                    }}
-                  />
-                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '8px' }}>
-                    <span style={{ fontSize: '12px', opacity: 0.7 }}>
-                      {imageSource === 'upload' ? '📁 Your uploaded image' : '📸 From Unsplash'}
-                    </span>
-                  </div>
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleFileUpload}
-                      style={{ display: 'none' }}
-                      id="file-upload"
-                    />
-                    <label
-                      htmlFor="file-upload"
-                      style={{
-                        ...styles.button,
-                        backgroundColor: '#10b981',
-                        color: 'white',
-                        fontSize: '12px',
-                        padding: '6px 12px',
-                        cursor: 'pointer',
-                        display: 'inline-block'
-                      }}
-                    >
-                      📁 Upload New
-                    </label>
-                    <button
-                      type="button"
-                      onClick={openImagePicker}
-                      style={{
-                        ...styles.button,
-                        backgroundColor: '#2563eb',
-                        color: 'white',
-                        fontSize: '12px',
-                        padding: '6px 12px'
-                      }}
-                    >
-                      📸 Browse Unsplash
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setNewCampaign(prev => ({ ...prev, image: '' }));
-                        setImageSource('');
-                      }}
-                      style={{
-                        ...styles.button,
-                        backgroundColor: '#ef4444',
-                        color: 'white',
-                        fontSize: '12px',
-                        padding: '6px 12px'
-                      }}
-                    >
-                      🗑️ Remove
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div style={{ display: 'flex', gap: '12px' }}>
-                  <div style={{ flex: 1 }}>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleFileUpload}
-                      style={{ display: 'none' }}
-                      id="file-upload-main"
-                    />
-                    <label
-                      htmlFor="file-upload-main"
-                      style={{
-                        width: '100%',
-                        padding: '30px 20px',
-                        borderRadius: '8px',
-                        border: `2px dashed ${dark ? '#555' : '#ddd'}`,
-                        backgroundColor: dark ? 'rgba(255,255,255,0.05)' : 'rgba(16, 185, 129, 0.05)',
-                        color: dark ? '#fff' : '#10b981',
-                        fontSize: '14px',
-                        fontWeight: '600',
-                        cursor: 'pointer',
-                        transition: 'all 0.3s ease',
-                        display: 'block',
-                        textAlign: 'center'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.target.style.backgroundColor = dark ? 'rgba(255,255,255,0.1)' : 'rgba(16, 185, 129, 0.1)';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.target.style.backgroundColor = dark ? 'rgba(255,255,255,0.05)' : 'rgba(16, 185, 129, 0.05)';
-                      }}
-                    >
-                      📁 Upload Your Image
-                      <div style={{ fontSize: '11px', opacity: 0.7, marginTop: '8px' }}>
-                        JPG, PNG, GIF up to 10MB
-                      </div>
-                    </label>
-                  </div>
-                  
-                  <div style={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
+                <div>
+                  <label style={{ 
+                    display: 'block', 
+                    marginBottom: '12px', 
                     fontSize: '16px', 
                     fontWeight: '600',
-                    color: dark ? '#666' : '#999'
+                    color: dark ? '#f1f5f9' : '#1e293b'
                   }}>
-                    OR
+                    Goal Amount (USDC) *
+                  </label>
+                  <input
+                    type="number"
+                    value={newCampaign.goal}
+                    onChange={(e) => setNewCampaign(prev => ({ ...prev, goal: e.target.value }))}
+                    placeholder="50000"
+                    style={{
+                      width: '100%',
+                      padding: '16px 20px',
+                      borderRadius: '16px',
+                      border: `2px solid ${dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
+                      backgroundColor: dark ? 'rgba(255,255,255,0.05)' : '#f8fafc',
+                      color: dark ? '#f1f5f9' : '#1e293b',
+                      fontSize: '16px',
+                      fontWeight: '500',
+                      transition: 'all 0.3s ease',
+                      outline: 'none',
+                      boxSizing: 'border-box'
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = '#2563eb';
+                      e.target.style.boxShadow = '0 0 0 4px rgba(37, 99, 235, 0.1)';
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
+                      e.target.style.boxShadow = 'none';
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ 
+                    display: 'block', 
+                    marginBottom: '12px', 
+                    fontSize: '16px', 
+                    fontWeight: '600',
+                    color: dark ? '#f1f5f9' : '#1e293b'
+                  }}>
+                    Category
+                  </label>
+                  <select
+                    value={newCampaign.category}
+                    onChange={(e) => {
+                      setNewCampaign(prev => ({ ...prev, category: e.target.value }));
+                      // Refresh images if picker is open
+                      if (showImagePicker) {
+                        fetchUnsplashImages(e.target.value);
+                      }
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '16px 20px',
+                      borderRadius: '16px',
+                      border: `2px solid ${dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
+                      backgroundColor: dark ? 'rgba(255,255,255,0.05)' : '#f8fafc',
+                      color: dark ? '#f1f5f9' : '#1e293b',
+                      fontSize: '16px',
+                      fontWeight: '500',
+                      cursor: 'pointer',
+                      outline: 'none',
+                      boxSizing: 'border-box'
+                    }}
+                  >
+                    <option value="Technology">Technology</option>
+                    <option value="Environment">Environment</option>
+                    <option value="Education">Education</option>
+                    <option value="Culture">Culture</option>
+                    <option value="Health">Health</option>
+                    <option value="Dreams">Dreams</option>
+                    <option value="Goals">Goals</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Creator Nickname */}
+              <div style={{ marginBottom: '24px' }}>
+                <label style={{ 
+                  display: 'block', 
+                  marginBottom: '12px', 
+                  fontSize: '16px', 
+                  fontWeight: '600',
+                  color: dark ? '#f1f5f9' : '#1e293b'
+                }}>
+                  Creator Nickname *
+                </label>
+                <input
+                  type="text"
+                  value={newCampaign.creatorNickname}
+                  onChange={(e) => setNewCampaign(prev => ({ ...prev, creatorNickname: e.target.value }))}
+                  placeholder="Your public nickname (e.g., @yourname)"
+                  style={{
+                    width: '100%',
+                    padding: '16px 20px',
+                    borderRadius: '16px',
+                    border: `2px solid ${dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
+                    backgroundColor: dark ? 'rgba(255,255,255,0.05)' : '#f8fafc',
+                    color: dark ? '#f1f5f9' : '#1e293b',
+                    fontSize: '16px',
+                    fontWeight: '500',
+                    transition: 'all 0.3s ease',
+                    outline: 'none',
+                    boxSizing: 'border-box'
+                  }}
+                  onFocus={(e) => {
+                    e.target.style.borderColor = '#2563eb';
+                    e.target.style.boxShadow = '0 0 0 4px rgba(37, 99, 235, 0.1)';
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
+                    e.target.style.boxShadow = 'none';
+                  }}
+                />
+              </div>
+
+              {/* Connected Wallet Display */}
+              {universalAddress && (
+                <div style={{ 
+                  marginBottom: '32px',
+                  padding: '20px',
+                  borderRadius: '16px',
+                  background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(16, 185, 129, 0.1) 100%)',
+                  border: `2px solid ${dark ? 'rgba(34, 197, 94, 0.2)' : 'rgba(34, 197, 94, 0.3)'}`,
+                  position: 'relative',
+                  overflow: 'hidden'
+                }}>
+                  <div style={{ 
+                    fontSize: '14px', 
+                    fontWeight: '600', 
+                    marginBottom: '8px',
+                    color: dark ? '#4ade80' : '#16a34a',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}>
+                    💼 Connected Wallet
                   </div>
-                  
-                  <div style={{ flex: 1 }}>
-                    <button
-                      type="button"
-                      onClick={openImagePicker}
-                      style={{
-                        width: '100%',
-                        padding: '30px 20px',
-                        borderRadius: '8px',
-                        border: `2px dashed ${dark ? '#555' : '#ddd'}`,
-                        backgroundColor: dark ? 'rgba(255,255,255,0.05)' : 'rgba(37, 99, 235, 0.05)',
-                        color: dark ? '#fff' : '#2563eb',
-                        fontSize: '14px',
-                        fontWeight: '600',
-                        cursor: 'pointer',
-                        transition: 'all 0.3s ease'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.target.style.backgroundColor = dark ? 'rgba(255,255,255,0.1)' : 'rgba(37, 99, 235, 0.1)';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.target.style.backgroundColor = dark ? 'rgba(255,255,255,0.05)' : 'rgba(37, 99, 235, 0.05)';
-                      }}
-                    >
-                      📸 Choose from Unsplash
-                      <div style={{ fontSize: '11px', opacity: 0.7, marginTop: '8px' }}>
-                        Professional photos for {newCampaign.category}
-                      </div>
-                    </button>
+                  <div style={{ 
+                    fontSize: '14px', 
+                    fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Monaco, Consolas, monospace',
+                    color: dark ? '#4ade80' : '#16a34a',
+                    backgroundColor: dark ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.7)',
+                    padding: '8px 12px',
+                    borderRadius: '8px',
+                    marginBottom: '8px',
+                    wordBreak: 'break-all'
+                  }}>
+                    {universalAddress}
+                  </div>
+                  <div style={{ 
+                    fontSize: '12px', 
+                    opacity: 0.8,
+                    color: dark ? '#4ade80' : '#16a34a'
+                  }}>
+                    This address will receive the funds if your campaign is successful
                   </div>
                 </div>
               )}
-            </div>
-            
-            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-              <button
-                onClick={() => setShowCreateModal(false)}
-                style={{
-                  ...styles.button,
-                  backgroundColor: '#6c757d',
-                  color: 'white'
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleCreateCampaignSubmit}
-                style={{
-                  ...styles.button,
-                  ...styles.primaryButton
-                }}
-              >
-                🚀 Create Campaign
-              </button>
+
+              {/* Campaign Image Section */}
+              <div style={{ marginBottom: '32px' }}>
+                <label style={{ 
+                  display: 'block', 
+                  marginBottom: '16px', 
+                  fontSize: '16px', 
+                  fontWeight: '600',
+                  color: dark ? '#f1f5f9' : '#1e293b'
+                }}>
+                  Campaign Image *
+                </label>
+                
+                {newCampaign.image ? (
+                  <div style={{ marginBottom: '16px' }}>
+                    <img 
+                      src={newCampaign.image}
+                      alt="Campaign preview"
+                      style={{
+                        width: '100%',
+                        height: '200px',
+                        objectFit: 'cover',
+                        borderRadius: '16px',
+                        marginBottom: '16px',
+                        border: `2px solid ${dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`
+                      }}
+                    />
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '16px' }}>
+                      <span style={{ 
+                        fontSize: '13px', 
+                        opacity: 0.7,
+                        color: dark ? '#94a3b8' : '#64748b',
+                        flex: 1
+                      }}>
+                        {imageSource === 'upload' ? '📁 Your uploaded image' : '📸 From Unsplash'}
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleFileUpload}
+                        style={{ display: 'none' }}
+                        id="file-upload"
+                      />
+                      <label
+                        htmlFor="file-upload"
+                        style={{
+                          padding: '12px 20px',
+                          backgroundColor: '#10b981',
+                          color: 'white',
+                          borderRadius: '12px',
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          fontSize: '14px',
+                          fontWeight: '600',
+                          border: 'none',
+                          transition: 'all 0.2s ease'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.target.style.backgroundColor = '#059669';
+                          e.target.style.transform = 'translateY(-1px)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.target.style.backgroundColor = '#10b981';
+                          e.target.style.transform = 'translateY(0)';
+                        }}
+                      >
+                        📁 Upload New
+                      </label>
+                      <button
+                        type="button"
+                        onClick={openImagePicker}
+                        style={{
+                          padding: '12px 20px',
+                          backgroundColor: '#2563eb',
+                          color: 'white',
+                          borderRadius: '12px',
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          fontSize: '14px',
+                          fontWeight: '600',
+                          border: 'none',
+                          transition: 'all 0.2s ease'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.target.style.backgroundColor = '#1d4ed8';
+                          e.target.style.transform = 'translateY(-1px)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.target.style.backgroundColor = '#2563eb';
+                          e.target.style.transform = 'translateY(0)';
+                        }}
+                      >
+                        📸 Browse Unsplash
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setNewCampaign(prev => ({ ...prev, image: '' }));
+                          setImageSource('');
+                        }}
+                        style={{
+                          padding: '12px 20px',
+                          backgroundColor: '#ef4444',
+                          color: 'white',
+                          borderRadius: '12px',
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          fontSize: '14px',
+                          fontWeight: '600',
+                          border: 'none',
+                          transition: 'all 0.2s ease'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.target.style.backgroundColor = '#dc2626';
+                          e.target.style.transform = 'translateY(-1px)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.target.style.backgroundColor = '#ef4444';
+                          e.target.style.transform = 'translateY(0)';
+                        }}
+                      >
+                        🗑️ Remove
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ 
+                    display: 'grid', 
+                    gridTemplateColumns: '1fr auto 1fr', 
+                    gap: '16px',
+                    alignItems: 'stretch'
+                  }}>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleFileUpload}
+                        style={{ display: 'none' }}
+                        id="file-upload-main"
+                      />
+                      <label
+                        htmlFor="file-upload-main"
+                        style={{
+                          width: '100%',
+                          minHeight: '120px',
+                          padding: '32px 20px',
+                          borderRadius: '16px',
+                          border: `2px dashed ${dark ? 'rgba(16, 185, 129, 0.3)' : 'rgba(16, 185, 129, 0.4)'}`,
+                          backgroundColor: dark ? 'rgba(16, 185, 129, 0.05)' : 'rgba(16, 185, 129, 0.08)',
+                          color: dark ? '#4ade80' : '#059669',
+                          fontSize: '14px',
+                          fontWeight: '600',
+                          cursor: 'pointer',
+                          transition: 'all 0.3s ease',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          textAlign: 'center',
+                          boxSizing: 'border-box'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.target.style.backgroundColor = dark ? 'rgba(16, 185, 129, 0.1)' : 'rgba(16, 185, 129, 0.12)';
+                          e.target.style.transform = 'translateY(-2px)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.target.style.backgroundColor = dark ? 'rgba(16, 185, 129, 0.05)' : 'rgba(16, 185, 129, 0.08)';
+                          e.target.style.transform = 'translateY(0)';
+                        }}
+                      >
+                        📁 Upload Your Image
+                        <div style={{ fontSize: '12px', opacity: 0.8, marginTop: '8px' }}>
+                          JPG, PNG, GIF up to 10MB
+                        </div>
+                      </label>
+                    </div>
+                    
+                    <div style={{ 
+                      fontSize: '16px', 
+                      fontWeight: '700',
+                      color: dark ? '#64748b' : '#94a3b8',
+                      textAlign: 'center',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      minHeight: '120px'
+                    }}>
+                      OR
+                    </div>
+                    
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <button
+                        type="button"
+                        onClick={openImagePicker}
+                        style={{
+                          width: '100%',
+                          minHeight: '120px',
+                          padding: '32px 20px',
+                          borderRadius: '16px',
+                          border: `2px dashed ${dark ? 'rgba(37, 99, 235, 0.3)' : 'rgba(37, 99, 235, 0.4)'}`,
+                          backgroundColor: dark ? 'rgba(37, 99, 235, 0.05)' : 'rgba(37, 99, 235, 0.08)',
+                          color: dark ? '#60a5fa' : '#2563eb',
+                          fontSize: '14px',
+                          fontWeight: '600',
+                          cursor: 'pointer',
+                          transition: 'all 0.3s ease',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          textAlign: 'center',
+                          boxSizing: 'border-box'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.target.style.backgroundColor = dark ? 'rgba(37, 99, 235, 0.1)' : 'rgba(37, 99, 235, 0.12)';
+                          e.target.style.transform = 'translateY(-2px)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.target.style.backgroundColor = dark ? 'rgba(37, 99, 235, 0.05)' : 'rgba(37, 99, 235, 0.08)';
+                          e.target.style.transform = 'translateY(0)';
+                        }}
+                      >
+                        📸 Choose from Unsplash
+                        <div style={{ fontSize: '12px', opacity: 0.8, marginTop: '8px' }}>
+                          Professional photos for {newCampaign.category}
+                        </div>
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Action Buttons */}
+              <div style={{ 
+                display: 'flex', 
+                gap: '16px', 
+                justifyContent: 'flex-end',
+                paddingTop: '24px',
+                borderTop: `1px solid ${dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`
+              }}>
+                <button
+                  onClick={() => setShowCreateModal(false)}
+                  style={{
+                    padding: '16px 32px',
+                    borderRadius: '16px',
+                    border: `2px solid ${dark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)'}`,
+                    backgroundColor: 'transparent',
+                    color: dark ? '#94a3b8' : '#64748b',
+                    fontSize: '16px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    minWidth: '120px'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.backgroundColor = dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
+                    e.target.style.transform = 'translateY(-1px)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.backgroundColor = 'transparent';
+                    e.target.style.transform = 'translateY(0)';
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleCreateCampaignSubmit}
+                  style={{
+                    padding: '16px 32px',
+                    borderRadius: '16px',
+                    border: 'none',
+                    background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+                    color: 'white',
+                    fontSize: '16px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    minWidth: '180px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    boxShadow: '0 4px 12px rgba(37, 99, 235, 0.3)'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.transform = 'translateY(-2px)';
+                    e.target.style.boxShadow = '0 8px 20px rgba(37, 99, 235, 0.4)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.transform = 'translateY(0)';
+                    e.target.style.boxShadow = '0 4px 12px rgba(37, 99, 235, 0.3)';
+                  }}
+                >
+                  🚀 Create Campaign
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -1386,7 +1668,7 @@ function App() {
                 ☕ <strong>Support Our Team:</strong> Building this platform takes time and coffee! 
                 If you like what we're doing, consider buying us a coffee to keep us caffeinated and coding.
               </p>
-            </div>
+      </div>
 
             <div style={{ 
               padding: '20px', 
@@ -1580,8 +1862,8 @@ function App() {
         </div>
       )}
        
-      </div>
-    );
-  }
+    </div>
+  );
+}
 
-  export default App;
+export default App;
