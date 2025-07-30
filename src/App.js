@@ -82,19 +82,11 @@ function App() {
     description: '',
     goal: '',
     category: 'Technology',
-    image: '',
     creatorNickname: '',
     duration: '30' // Duration in days, default 30 days
   });
 
-  // Unsplash integration states
-  const [unsplashImages, setUnsplashImages] = useState([]);
-  const [loadingImages, setLoadingImages] = useState(false);
-  const [showImagePicker, setShowImagePicker] = useState(false);
-  const [imageSource, setImageSource] = useState(''); // 'unsplash' or 'upload'
-
-  // Unsplash API configuration
-  const UNSPLASH_ACCESS_KEY = 'uGdVJxeg4lsYvDtmfAiTdQtpkkoet2TUVZyz5llER6E';
+  // Removed image upload functionality - will be added to campaign editing later
 
     // Use Alchemy RPC if available for better performance
   const alchemyBaseRpcUrl = process.env.REACT_APP_ALCHEMY_BASE_RPC_URL;
@@ -138,127 +130,21 @@ function App() {
     }
   };
 
-  // Use real campaigns if available, otherwise fall back to mock data
-  const mockCampaigns = [
-    {
-      id: 1,
-      title: "Clean Water for Rural Communities",
-      description: "Help us build water wells in underserved communities across East Africa.",
-      image: "https://images.unsplash.com/photo-1541919329513-35f7af297129?w=400&h=300&fit=crop",
-      creator: "WaterHope Foundation",
-      raised: 12450,
-      goal: 50000,
-      backers: 89,
-      daysLeft: 23,
-      category: "Environment",
-      status: "Active"
-    },
-    {
-      id: 2,
-      title: "Revolutionary Solar Panel Technology",
-      description: "Next-generation solar panels with 40% higher efficiency than current models.",
-      image: "https://images.unsplash.com/photo-1509391366360-2e959784a276?w=400&h=300&fit=crop",
-      creator: "SolarTech Innovation",
-      raised: 75300,
-      goal: 100000,
-      backers: 234,
-      daysLeft: 15,
-      category: "Technology",
-      status: "Active"
-    },
-    {
-      id: 3,
-      title: "Educational Gaming App for Kids",
-      description: "Interactive learning platform that makes education fun through gamification.",
-      image: "https://images.unsplash.com/photo-1596464716127-f2a82984de30?w=400&h=300&fit=crop",
-      creator: "EduPlay Studios",
-      raised: 28750,
-      goal: 40000,
-      backers: 156,
-      daysLeft: 8,
-      category: "Education",
-      status: "Active"
-    },
-    {
-      id: 4,
-      title: "Ocean Cleanup Initiative",
-      description: "Advanced technology to remove plastic waste from our oceans.",
-      image: "https://images.unsplash.com/photo-1583212292454-1fe6229603b7?w=400&h=300&fit=crop",
-      creator: "OceanSaver Project",
-      raised: 45200,
-      goal: 80000,
-      backers: 312,
-      daysLeft: 31,
-      category: "Environment",
-      status: "Active"
-    },
-    {
-      id: 5,
-      title: "Smart Home Security System",
-      description: "AI-powered security system for modern homes.",
-      image: "https://images.unsplash.com/photo-1558002038-1055907df827?w=400&h=300&fit=crop",
-      creator: "SecureTech Ltd",
-      raised: 98500,
-      goal: 100000,
-      backers: 445,
-      daysLeft: 5,
-      category: "Technology",
-      status: "Nearly Funded"
-    },
-    {
-      id: 6,
-      title: "Community Garden Project",
-      description: "Building sustainable community gardens in urban areas.",
-      image: "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=400&h=300&fit=crop",
-      creator: "Green Communities",
-      raised: 150000,
-      goal: 120000,
-      backers: 892,
-      daysLeft: 0,
-      category: "Environment",
-      status: "Completed - Funded"
-    },
-    {
-      id: 7,
-      title: "Vintage Book Restoration",
-      description: "Preserving rare books for future generations.",
-      image: "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=400&h=300&fit=crop",
-      creator: "Heritage Library",
-      raised: 15000,
-      goal: 50000,
-      backers: 78,
-      daysLeft: 0,
-      category: "Culture",
-      status: "Completed - Unfunded"
-    },
-    // Dreams and Goals campaigns
-    {
-      id: 8,
-      title: "Follow My Dream: Becoming a Professional Chef",
-      description: "Help me attend culinary school and open my own restaurant to serve my community.",
-      raised: 3200,
-      goal: 15000,
-      backers: 24,
-      daysLeft: 45,
-      category: "Dreams",
-      image: "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=400",
-      creator: "Chef Maria Rodriguez",
-      status: "Active"
-    },
-    {
-      id: 9,
-      title: "Goal: Marathon for Mental Health Awareness",
-      description: "Supporting mental health by running 26.2 miles and raising funds for therapy programs.",
-      raised: 8750,
-      goal: 10000,
-      backers: 156,
-      daysLeft: 12,
-      category: "Goals",
-      image: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400",
-      creator: "Alex Thompson",
-      status: "Nearly Funded"
-    }
-  ];
+  // Mock campaigns removed - using only real blockchain campaigns now
+  /* Example campaign structure for reference:
+  {
+    id: 1,
+    title: "Clean Water for Rural Communities",
+    description: "Help us build water wells in underserved communities across East Africa.",
+    image: "https://images.unsplash.com/photo-1541919329513-35f7af297129?w=400&h=300&fit=crop",
+    creator: "WaterHope Foundation",
+    raised: 12450,
+    goal: 50000,
+    backers: 89,
+    daysLeft: 23,
+    category: "Environment",
+    status: "Active"
+  } */
 
   // Use real campaigns if we have them and not loading, otherwise use mock data
   // Debug campaign data
@@ -268,80 +154,14 @@ function App() {
   console.log('campaignData.campaigns:', campaignData.campaigns);
   console.log('campaignData.campaigns.length:', campaignData.campaigns?.length);
   
-  // Demo campaigns for non-logged users and examples
-  const demoCampaigns = [
-    {
-      id: 'demo-1',
-      title: "Clean Water for Rural Communities",
-      description: "Help us build water wells in underserved communities across East Africa.",
-      image: "https://images.unsplash.com/photo-1541919329513-35f7af297129?w=400&h=300&fit=crop",
-      creator: "WaterHope Foundation",
-      raised: 12450,
-      goal: 50000,
-      backers: 89,
-      daysLeft: 23,
-      category: "Environment",
-      status: "Active",
-      isDemo: true // Mark as demo campaign
-    },
-    {
-      id: 'demo-2',
-      title: "Revolutionary Solar Panel Technology",
-      description: "Next-generation solar panels with 40% higher efficiency than current models.",
-      image: "https://images.unsplash.com/photo-1509391366360-2e959784a276?w=400&h=300&fit=crop",
-      creator: "SolarTech Innovation",
-      raised: 75300,
-      goal: 100000,
-      backers: 234,
-      daysLeft: 15,
-      category: "Technology",
-      status: "Active",
-      isDemo: true // Mark as demo campaign
-    },
-    {
-      id: 'demo-3',
-      title: "Educational Gaming App for Kids",
-      description: "Interactive learning platform that makes education fun through gamification.",
-      image: "https://images.unsplash.com/photo-1596464716127-f2a82984de30?w=400&h=300&fit=crop",
-      creator: "EduPlay Studios",
-      raised: 28750,
-      goal: 40000,
-      backers: 156,
-      daysLeft: 8,
-      category: "Education",
-      status: "Active",
-      isDemo: true
-    }
-  ];
+  // Demo campaigns removed - showing only real blockchain campaigns
 
-  // PRIORITY: Real blockchain campaigns first, demo campaigns only as backup
-  // Demo campaigns are shown only when no real campaigns exist or they're still loading
-  const hasRealCampaigns = campaignData.campaigns.length > 0;
-  const isStillLoading = campaignData.loading;
+  // Only real blockchain campaigns - no mock/demo campaigns
+  const finalCampaigns = campaignData.campaigns || [];
   
-  // Show real campaigns if available, otherwise show demo campaigns while loading
-  const campaigns = hasRealCampaigns ? 
-    campaignData.campaigns : // Only real campaigns when available
-    (isStillLoading ? demoCampaigns : []); // Demo campaigns only while loading, empty if no real campaigns found
-    
-  const finalCampaigns = campaigns;
-  
-  console.log('✅ CAMPAIGN DISPLAY LOGIC - BLOCKCHAIN FIRST');
-  console.log('User logged in:', isSignedIn);
-  console.log('Real campaigns available:', campaignData.campaigns.length);
+  console.log('✅ SHOWING REAL BLOCKCHAIN CAMPAIGNS ONLY');
+  console.log('Real campaigns available:', finalCampaigns.length);
   console.log('Campaign data loading:', campaignData.loading);
-  console.log('Has real campaigns:', hasRealCampaigns);
-  console.log('Is still loading:', isStillLoading);
-  console.log('Final campaigns source:', hasRealCampaigns ? 'BLOCKCHAIN' : (isStillLoading ? 'DEMO (loading)' : 'EMPTY'));
-  console.log('finalCampaigns:', finalCampaigns.length);
-  
-  if (hasRealCampaigns) {
-    console.log('✅ Showing REAL blockchain campaigns:', campaignData.campaigns.map(c => ({ id: c.id, title: c.title, raised: c.raised, backers: c.backers })));
-  } else if (isStillLoading) {
-    console.log('⏳ Still loading - showing demo campaigns as placeholder');
-  } else {
-    console.log('🔍 No campaigns found on blockchain yet');
-  }
 
   // Filter campaigns based on status
   const getFilteredCampaigns = () => {
@@ -907,68 +727,7 @@ function App() {
     }
   };
 
-  // Unsplash API functions
-  const fetchUnsplashImages = async (category) => {
-    setLoadingImages(true);
-    try {
-      const searchTerms = {
-        'Technology': 'technology innovation computer',
-        'Environment': 'nature environment sustainability',
-        'Education': 'education learning school',
-        'Culture': 'culture art community',
-        'Health': 'health medical healthcare',
-        'Dreams': 'dreams aspiration hope future inspiration',
-        'Goals': 'goals achievement success motivation challenge'
-      };
-
-      const searchTerm = searchTerms[category] || category;
-      const response = await fetch(
-        `https://api.unsplash.com/search/photos?query=${searchTerm}&per_page=12&orientation=landscape`,
-        {
-          headers: {
-            'Authorization': `Client-ID ${UNSPLASH_ACCESS_KEY}`
-          }
-        }
-      );
-
-      const data = await response.json();
-      setUnsplashImages(data.results || []);
-    } catch (error) {
-      console.error('Failed to fetch Unsplash images:', error);
-      setUnsplashImages([]);
-    } finally {
-      setLoadingImages(false);
-    }
-  };
-
-  const handleImageSelect = (image) => {
-    setNewCampaign(prev => ({ ...prev, image: image.urls.regular }));
-    setShowImagePicker(false);
-    setImageSource('unsplash');
-    // Trigger download as required by Unsplash API guidelines
-    fetch(`https://api.unsplash.com/photos/${image.id}/download`, {
-      headers: {
-        'Authorization': `Client-ID ${UNSPLASH_ACCESS_KEY}`
-      }
-    }).catch(console.error);
-  };
-
-  const handleFileUpload = (event) => {
-    const file = event.target.files[0];
-    if (file && file.type.startsWith('image/')) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setNewCampaign(prev => ({ ...prev, image: e.target.result }));
-        setImageSource('upload');
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const openImagePicker = () => {
-    setShowImagePicker(true);
-    fetchUnsplashImages(newCampaign.category);
-  };
+  // Image upload functionality removed - will be added to campaign editing later
 
   const dark = theme === 'dark';
 
@@ -1693,31 +1452,16 @@ function App() {
                               </span>
                             </div>
                             
-                            {campaign.isDemo ? (
-                              <div style={{
+                            <BasePayButton 
+                              colorScheme={theme}
+                              onClick={() => handleBasePay(campaign)}
+                              style={{
                                 fontSize: '11px',
                                 padding: '8px 16px',
-                                backgroundColor: '#6b7280',
-                                color: 'white',
-                                borderRadius: '10px',
-                                fontWeight: 'bold',
-                                opacity: 0.7,
-                                cursor: 'not-allowed'
-                              }}>
-                                🎭 Demo Campaign
-                              </div>
-                            ) : (
-                              <BasePayButton 
-                                colorScheme={theme}
-                                onClick={() => handleBasePay(campaign)}
-                                style={{
-                                  fontSize: '11px',
-                                  padding: '8px 16px',
-                                  transform: 'scale(0.9)',
-                                  borderRadius: '10px'
-                                }}
-                              />
-                            )}
+                                transform: 'scale(0.9)',
+                                borderRadius: '10px'
+                              }}
+                            />
                           </div>
                         </>
                       )}
@@ -2070,13 +1814,7 @@ function App() {
                   </label>
                   <select
                     value={newCampaign.category}
-                    onChange={(e) => {
-                      setNewCampaign(prev => ({ ...prev, category: e.target.value }));
-                      // Refresh images if picker is open
-                      if (showImagePicker) {
-                        fetchUnsplashImages(e.target.value);
-                      }
-                    }}
+                    onChange={(e) => setNewCampaign(prev => ({ ...prev, category: e.target.value }))}
                     style={{
                       width: '100%',
                       padding: '16px 20px',
@@ -2235,244 +1973,8 @@ function App() {
                 </div>
               )}
 
-              {/* Campaign Image Section */}
-              <div style={{ marginBottom: '32px' }}>
-                <label style={{ 
-                  display: 'block', 
-                  marginBottom: '16px', 
-                  fontSize: '16px', 
-                  fontWeight: '600',
-                  color: dark ? '#f1f5f9' : '#1e293b'
-                }}>
-                  Campaign Image *
-                </label>
-                
-                {newCampaign.image ? (
-                  <div style={{ marginBottom: '16px' }}>
-                    <img 
-                      src={newCampaign.image}
-                      alt="Campaign preview"
-                      style={{
-                        width: '100%',
-                        height: '200px',
-                        objectFit: 'cover',
-                        borderRadius: '16px',
-                        marginBottom: '16px',
-                        border: `2px solid ${dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`
-                      }}
-                    />
-                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '16px' }}>
-                      <span style={{ 
-                        fontSize: '13px', 
-                        opacity: 0.7,
-                        color: dark ? '#94a3b8' : '#64748b',
-                        flex: 1
-                      }}>
-                        {imageSource === 'upload' ? '📁 Your uploaded image' : '📸 From Unsplash'}
-                      </span>
-                    </div>
-                    <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleFileUpload}
-                        style={{ display: 'none' }}
-                        id="file-upload"
-                      />
-                      <label
-                        htmlFor="file-upload"
-                        style={{
-                          padding: '12px 20px',
-                          backgroundColor: '#10b981',
-                          color: 'white',
-                          borderRadius: '12px',
-                          cursor: 'pointer',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '8px',
-                          fontSize: '14px',
-                          fontWeight: '600',
-                          border: 'none',
-                          transition: 'all 0.2s ease'
-                        }}
-                        onMouseEnter={(e) => {
-                          e.target.style.backgroundColor = '#059669';
-                          e.target.style.transform = 'translateY(-1px)';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.target.style.backgroundColor = '#10b981';
-                          e.target.style.transform = 'translateY(0)';
-                        }}
-                      >
-                        📁 Upload New
-                      </label>
-                      <button
-                        type="button"
-                        onClick={openImagePicker}
-                        style={{
-                          padding: '12px 20px',
-                          backgroundColor: '#2563eb',
-                          color: 'white',
-                          borderRadius: '12px',
-                          cursor: 'pointer',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '8px',
-                          fontSize: '14px',
-                          fontWeight: '600',
-                          border: 'none',
-                          transition: 'all 0.2s ease'
-                        }}
-                        onMouseEnter={(e) => {
-                          e.target.style.backgroundColor = '#1d4ed8';
-                          e.target.style.transform = 'translateY(-1px)';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.target.style.backgroundColor = '#2563eb';
-                          e.target.style.transform = 'translateY(0)';
-                        }}
-                      >
-                        📸 Browse Unsplash
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setNewCampaign(prev => ({ ...prev, image: '' }));
-                          setImageSource('');
-                        }}
-                        style={{
-                          padding: '12px 20px',
-                          backgroundColor: '#ef4444',
-                          color: 'white',
-                          borderRadius: '12px',
-                          cursor: 'pointer',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '8px',
-                          fontSize: '14px',
-                          fontWeight: '600',
-                          border: 'none',
-                          transition: 'all 0.2s ease'
-                        }}
-                        onMouseEnter={(e) => {
-                          e.target.style.backgroundColor = '#dc2626';
-                          e.target.style.transform = 'translateY(-1px)';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.target.style.backgroundColor = '#ef4444';
-                          e.target.style.transform = 'translateY(0)';
-                        }}
-                      >
-                        🗑️ Remove
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <div style={{ 
-                    display: 'grid', 
-                    gridTemplateColumns: '1fr auto 1fr', 
-                    gap: '16px',
-                    alignItems: 'stretch'
-                  }}>
-                    <div style={{ display: 'flex', flexDirection: 'column' }}>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleFileUpload}
-                        style={{ display: 'none' }}
-                        id="file-upload-main"
-                      />
-                      <label
-                        htmlFor="file-upload-main"
-                        style={{
-                          width: '100%',
-                          minHeight: '120px',
-                          padding: '32px 20px',
-                          borderRadius: '16px',
-                          border: `2px dashed ${dark ? 'rgba(16, 185, 129, 0.3)' : 'rgba(16, 185, 129, 0.4)'}`,
-                          backgroundColor: dark ? 'rgba(16, 185, 129, 0.05)' : 'rgba(16, 185, 129, 0.08)',
-                          color: dark ? '#4ade80' : '#059669',
-                          fontSize: '14px',
-                          fontWeight: '600',
-                          cursor: 'pointer',
-                          transition: 'all 0.3s ease',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          textAlign: 'center',
-                          boxSizing: 'border-box'
-                        }}
-                        onMouseEnter={(e) => {
-                          e.target.style.backgroundColor = dark ? 'rgba(16, 185, 129, 0.1)' : 'rgba(16, 185, 129, 0.12)';
-                          e.target.style.transform = 'translateY(-2px)';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.target.style.backgroundColor = dark ? 'rgba(16, 185, 129, 0.05)' : 'rgba(16, 185, 129, 0.08)';
-                          e.target.style.transform = 'translateY(0)';
-                        }}
-                      >
-                        📁 Upload Your Image
-                        <div style={{ fontSize: '12px', opacity: 0.8, marginTop: '8px' }}>
-                          JPG, PNG, GIF up to 10MB
-                        </div>
-                      </label>
-                    </div>
-                    
-                    <div style={{ 
-                      fontSize: '16px', 
-                      fontWeight: '700',
-                      color: dark ? '#64748b' : '#94a3b8',
-                      textAlign: 'center',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      minHeight: '120px'
-                    }}>
-                      OR
-                    </div>
-                    
-                    <div style={{ display: 'flex', flexDirection: 'column' }}>
-                      <button
-                        type="button"
-                        onClick={openImagePicker}
-                        style={{
-                          width: '100%',
-                          minHeight: '120px',
-                          padding: '32px 20px',
-                          borderRadius: '16px',
-                          border: `2px dashed ${dark ? 'rgba(37, 99, 235, 0.3)' : 'rgba(37, 99, 235, 0.4)'}`,
-                          backgroundColor: dark ? 'rgba(37, 99, 235, 0.05)' : 'rgba(37, 99, 235, 0.08)',
-                          color: dark ? '#60a5fa' : '#2563eb',
-                          fontSize: '14px',
-                          fontWeight: '600',
-                          cursor: 'pointer',
-                          transition: 'all 0.3s ease',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          textAlign: 'center',
-                          boxSizing: 'border-box'
-                        }}
-                        onMouseEnter={(e) => {
-                          e.target.style.backgroundColor = dark ? 'rgba(37, 99, 235, 0.1)' : 'rgba(37, 99, 235, 0.12)';
-                          e.target.style.transform = 'translateY(-2px)';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.target.style.backgroundColor = dark ? 'rgba(37, 99, 235, 0.05)' : 'rgba(37, 99, 235, 0.08)';
-                          e.target.style.transform = 'translateY(0)';
-                        }}
-                      >
-                        📸 Choose from Unsplash
-                        <div style={{ fontSize: '12px', opacity: 0.8, marginTop: '8px' }}>
-                          Professional photos for {newCampaign.category}
-                        </div>
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
+              {/* Campaign image upload will be added to campaign editing later */}
+
 
               {/* Action Buttons */}
               <div style={{ 
@@ -2628,158 +2130,8 @@ function App() {
         </div>
       )}
 
-      {/* Unsplash Image Picker Modal */}
-      {showImagePicker && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.8)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1001
-        }}>
-          <div style={{
-            ...styles.card,
-            width: '800px',
-            maxWidth: '90vw',
-            maxHeight: '80vh',
-            overflow: 'auto'
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h3 style={{ margin: 0, fontSize: '20px' }}>
-                📸 Choose Image - {newCampaign.category}
-              </h3>
-              <button
-                onClick={() => setShowImagePicker(false)}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  fontSize: '24px',
-                  cursor: 'pointer',
-                  color: dark ? '#fff' : '#000'
-                }}
-              >
-                ✕
-              </button>
-            </div>
+      {/* Unsplash Image Picker Modal removed - will be added to campaign editing later */}
 
-            <div style={{ marginBottom: '16px' }}>
-              <button
-                onClick={() => fetchUnsplashImages(newCampaign.category)}
-                disabled={loadingImages}
-                style={{
-                  ...styles.button,
-                  ...styles.primaryButton,
-                  fontSize: '14px',
-                  opacity: loadingImages ? 0.6 : 1
-                }}
-              >
-                {loadingImages ? '⏳ Loading...' : '🔄 Refresh Images'}
-              </button>
-            </div>
-
-            {loadingImages ? (
-              <div style={{ 
-                display: 'flex', 
-                justifyContent: 'center', 
-                alignItems: 'center', 
-                height: '200px',
-                fontSize: '18px'
-              }}>
-                ⏳ Loading beautiful images...
-              </div>
-            ) : (
-              <div style={{ 
-                display: 'grid', 
-                gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', 
-                gap: '12px',
-                marginBottom: '20px'
-              }}>
-                {unsplashImages.map(image => (
-                  <div 
-                    key={image.id}
-                    onClick={() => handleImageSelect(image)}
-                    style={{
-                      cursor: 'pointer',
-                      borderRadius: '8px',
-                      overflow: 'hidden',
-                      transition: 'transform 0.2s ease',
-                      '&:hover': {
-                        transform: 'scale(1.05)'
-                      }
-                    }}
-                    onMouseEnter={(e) => {
-                      e.target.style.transform = 'scale(1.05)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.target.style.transform = 'scale(1)';
-                    }}
-                  >
-                    <img 
-                      src={image.urls.small}
-                      alt={image.alt_description || 'Unsplash image'}
-                      style={{
-                        width: '100%',
-                        height: '120px',
-                        objectFit: 'cover',
-                        display: 'block'
-                      }}
-                    />
-                    <div style={{
-                      padding: '8px',
-                      backgroundColor: dark ? 'rgba(0,0,0,0.8)' : 'rgba(255,255,255,0.9)',
-                      fontSize: '10px',
-                      lineHeight: '1.2'
-                    }}>
-                      Photo by{' '}
-                      <a 
-                        href={`https://unsplash.com/@${image.user.username}?utm_source=fundly&utm_medium=referral`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{ color: '#2563eb', textDecoration: 'none' }}
-                      >
-                        {image.user.name}
-                      </a>
-                      {' '}on{' '}
-                      <a 
-                        href="https://unsplash.com/?utm_source=fundly&utm_medium=referral"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{ color: '#2563eb', textDecoration: 'none' }}
-                      >
-                        Unsplash
-                      </a>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <div style={{ 
-              fontSize: '12px', 
-              opacity: 0.7, 
-              textAlign: 'center',
-              padding: '16px',
-              borderTop: `1px solid ${dark ? '#333' : '#eee'}`
-            }}>
-              Images provided by{' '}
-              <a 
-                href="https://unsplash.com/?utm_source=fundly&utm_medium=referral"
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ color: '#2563eb', textDecoration: 'none' }}
-              >
-                Unsplash
-              </a>
-              {' '}• Click any image to select
-            </div>
-          </div>
-        </div>
-      )}
        
     </div>
     </>

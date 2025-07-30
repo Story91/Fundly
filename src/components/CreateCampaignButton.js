@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { createBaseAccountSDK } from '@base-org/account';
 import { parseUnits, encodeFunctionData, createPublicClient, http } from 'viem';
 import { base } from 'viem/chains';
-import { put } from '@vercel/blob';
+// Removed @vercel/blob import - image upload will be added to campaign editing later
 import { CONTRACT_CONFIG, getContractAddress } from '../contracts/contract-config';
 import contractAbi from '../contracts/CrowdfundingPlatform.abi.json';
 
@@ -17,8 +17,7 @@ const CreateCampaignButton = ({
 }) => {
   const [isCreating, setIsCreating] = useState(false);
   const [txHash, setTxHash] = useState(null);
-  const [isUploadingImage, setIsUploadingImage] = useState(false);
-  const [uploadedImageUrl, setUploadedImageUrl] = useState(null);
+  // Removed image upload states - will be added to campaign editing later
 
   // Use Alchemy RPC if available for better performance
   const alchemyBaseRpcUrl = process.env.REACT_APP_ALCHEMY_BASE_RPC_URL;
@@ -33,7 +32,7 @@ const CreateCampaignButton = ({
     chain: {
       id: 8453, // Base Mainnet
       name: 'Base Mainnet',
-      network: 'base-sepolia',
+      network: 'base',
       nativeCurrency: {
         decimals: 18,
         name: 'Ether',
@@ -50,55 +49,7 @@ const CreateCampaignButton = ({
     },
   });
 
-  // Upload image to Vercel Blob
-  const uploadImageToBlob = async (imageUrl, campaignTitle) => {
-    try {
-      setIsUploadingImage(true);
-      console.log('Uploading image to Vercel Blob:', imageUrl);
-      
-      // If it's a file object, upload directly
-      if (imageUrl instanceof File) {
-        const timestamp = Date.now();
-        const extension = imageUrl.name.split('.').pop();
-        const filename = `campaigns/${campaignTitle.replace(/[^a-zA-Z0-9]/g, '_')}-${timestamp}.${extension}`;
-        
-        const { url } = await put(filename, imageUrl, { 
-          access: 'public',
-          addRandomSuffix: false,
-        });
-        
-        console.log('File uploaded to blob:', url);
-        setUploadedImageUrl(url);
-        return url;
-      }
-      
-      // If it's a URL, fetch and upload
-      if (typeof imageUrl === 'string' && imageUrl.startsWith('http')) {
-        const response = await fetch(imageUrl);
-        if (!response.ok) throw new Error('Failed to fetch image');
-        
-        const blob = await response.blob();
-        const timestamp = Date.now();
-        const filename = `campaigns/${campaignTitle.replace(/[^a-zA-Z0-9]/g, '_')}-${timestamp}.jpg`;
-        
-        const { url } = await put(filename, blob, { 
-          access: 'public',
-          addRandomSuffix: false,
-        });
-        
-        console.log('URL image uploaded to blob:', url);
-        setUploadedImageUrl(url);
-        return url;
-      }
-      
-      return imageUrl; // Return original if no upload needed
-    } catch (error) {
-      console.error('Error uploading to blob:', error);
-      return imageUrl; // Fallback to original URL
-    } finally {
-      setIsUploadingImage(false);
-    }
-  };
+  // Image upload functionality removed - will be added to campaign editing later
 
   // Handle Create Campaign form submission - WITH REAL CONTRACT!
   const handleCreateCampaignSubmit = async () => {
@@ -112,10 +63,7 @@ const CreateCampaignButton = ({
       return;
     }
 
-    if (!newCampaign.image) {
-      alert('Please select an image for your campaign');
-      return;
-    }
+    // Image validation removed - images will be added via campaign editing later
 
     if (!isSignedIn || !universalAddress) {
       alert('Please sign in with Base Account first to create a campaign');
@@ -126,12 +74,7 @@ const CreateCampaignButton = ({
     const targetChainId = 8453;
 
     try {
-      // 1. Upload image to Vercel Blob first (if provided)
-      let finalImageUrl = newCampaign.image;
-      if (newCampaign.image) {
-        addToast('📸 Uploading image to storage...', 'info');
-        finalImageUrl = await uploadImageToBlob(newCampaign.image, newCampaign.title);
-      }
+      // Image upload removed - will be added to campaign editing later
       // Validation
       const goalAmount = parseFloat(newCampaign.goal);
       if (goalAmount < CONTRACT_CONFIG.settings.minGoal) {
@@ -239,7 +182,7 @@ const CreateCampaignButton = ({
   useEffect(() => {
     if (txHash && typeof txHash === 'string') {
       setShowCreateModal(false);
-      setNewCampaign({ title: '', description: '', goal: '', category: 'Technology', image: '', creatorNickname: '', duration: '30' });
+      setNewCampaign({ title: '', description: '', goal: '', category: 'Technology', creatorNickname: '', duration: '30' });
       setIsCreating(false);
       
       // Notify parent component to refresh campaigns
@@ -252,7 +195,7 @@ const CreateCampaignButton = ({
   return (
     <button
       onClick={handleCreateCampaignSubmit}
-      disabled={isCreating || isUploadingImage}
+      disabled={isCreating}
       style={{
         padding: '16px 32px',
         borderRadius: '16px',
@@ -272,7 +215,7 @@ const CreateCampaignButton = ({
         opacity: isCreating ? 0.7 : 1
       }}
     >
-      {isUploadingImage ? '📸 Uploading Image...' : isCreating ? '🔄 Creating...' : '🚀 Create Campaign'}
+      {isCreating ? '🔄 Creating...' : '🚀 Create Campaign'}
     </button>
   );
 };
