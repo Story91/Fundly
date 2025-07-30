@@ -1615,11 +1615,7 @@ function App() {
                     
                     <div style={{ marginBottom: '12px' }}>
                       <div style={{ fontSize: '13px', opacity: 0.7, marginBottom: '12px' }}>
-                        👥 {
-                          campaign.backers === 0 && !campaign.isDemo && isSignedIn && campaignData.loading
-                            ? <span style={{ color: '#3b82f6', fontStyle: 'italic' }}>counting backers...</span>
-                            : `${campaign.backers} backers`
-                        } • ⏰ {campaign.daysLeft > 0 ? `${campaign.daysLeft} days left` : 'Campaign ended'}
+                        👥 {campaign.backers} backers • ⏰ {campaign.daysLeft > 0 ? `${campaign.daysLeft} days left` : 'Campaign ended'}
                       </div>
                       
                       {campaign.status === 'Active' && (

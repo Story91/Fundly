@@ -129,24 +129,12 @@ const CampaignManager = ({ onCampaignsUpdate }) => {
       // DON'T change setCampaignsLoading here - still loading for Phase 2
       // DON'T call onCampaignsUpdate manually - let useEffect handle it
       
-      // PHASE 2: Update with backers count
-      console.log(`⏳ Starting SLOW fetch for backers count...`);
-      const startTimeSlow = Date.now();
-      
-      const campaignsWithBackers = await Promise.all(
-        validCampaigns.map(async (campaign) => {
-          const backersCount = await getBackersCount(campaign.id);
-          return { ...campaign, backers: backersCount };
-        })
-      );
-      
-      const endTimeSlow = Date.now();
-      console.log(`✅ PHASE 2 COMPLETE: Updated ${campaignsWithBackers.length} campaigns with backers in ${endTimeSlow - startTimeSlow}ms`);
-      console.log('📊 Final campaigns:', campaignsWithBackers.map(c => ({ id: c.id, title: c.title, raised: c.raised, backers: c.backers })));
-      
-      setRealCampaigns(campaignsWithBackers);
+      // DONE! No Phase 2 for now - just show campaigns with backers: 0
+      console.log(`✅ SKIPPING backers count for now - campaigns visible immediately!`);
       setCampaignsLoading(false); // This will trigger useEffect
       // DON'T call onCampaignsUpdate manually - let useEffect handle it
+      
+      // TODO: Add backers counting in background later
     } catch (error) {
       console.error('Error fetching campaigns:', error);
       setRealCampaigns([]);
