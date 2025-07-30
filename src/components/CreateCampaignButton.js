@@ -10,7 +10,7 @@ const CreateCampaignButton = ({
   newCampaign, 
   setNewCampaign, 
   setShowCreateModal, 
-  setPaymentStatus,
+  addToast,
   onCampaignCreated,
   isSignedIn,
   universalAddress
@@ -123,7 +123,7 @@ const CreateCampaignButton = ({
       // 1. Upload image to Vercel Blob first (if provided)
       let finalImageUrl = newCampaign.image;
       if (newCampaign.image) {
-        setPaymentStatus('📸 Uploading image to storage...');
+        addToast('📸 Uploading image to storage...', 'info');
         finalImageUrl = await uploadImageToBlob(newCampaign.image, newCampaign.title);
       }
       // Validation
@@ -137,7 +137,7 @@ const CreateCampaignButton = ({
       const goalInWei = parseUnits(newCampaign.goal, 6); // USDC has 6 decimals
       const durationInSeconds = Number(newCampaign.duration) * 24 * 60 * 60; // Convert days to seconds
       
-      setPaymentStatus('Creating campaign on blockchain...');
+      addToast('Creating campaign on blockchain...', 'info');
 
       setIsCreating(true);
 
@@ -165,7 +165,7 @@ const CreateCampaignButton = ({
       console.log('Contract address:', getContractAddress(targetChainId));
       console.log('Args:', [newCampaign.title, newCampaign.description, goalInWei.toString(), durationInSeconds]);
       
-      setPaymentStatus('🌐 Switching to Base Mainnet network...');
+      addToast('🌐 Switching to Base Mainnet network...', 'info');
       
       // First switch to Base Mainnet network
       try {
@@ -194,7 +194,7 @@ const CreateCampaignButton = ({
         }
       }
 
-      setPaymentStatus('📝 Creating campaign on blockchain...');
+      addToast('📝 Creating campaign on blockchain...', 'info');
       console.log('Sending transaction...');
       
       // Now send the transaction
@@ -216,7 +216,7 @@ const CreateCampaignButton = ({
       const txHash = typeof tx === 'string' ? tx : tx.hash || tx.transactionHash || tx;
       
       setTxHash(txHash);
-      setPaymentStatus(`✅ Campaign created! Transaction: ${txHash.slice(0, 10)}...`);
+      addToast(`✅ Campaign created! Transaction: ${txHash.slice(0, 10)}...`, 'success');
       
       // Skip Supabase sync for now - need to get real campaign ID from contract
       console.log('ℹ️ Campaign created on blockchain - Supabase sync temporarily disabled');
@@ -224,7 +224,7 @@ const CreateCampaignButton = ({
     } catch (error) {
       console.error('Error creating campaign:', error);
       alert('Error creating campaign: ' + error.message);
-      setPaymentStatus('❌ Campaign creation failed');
+      addToast('❌ Campaign creation failed', 'error');
       setIsCreating(false);
     }
   };

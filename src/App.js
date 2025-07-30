@@ -15,13 +15,13 @@ import CreateCampaignButton from './components/CreateCampaignButton';
 import UserDashboard from './components/UserDashboard';
 import ImageUploadField from './components/ImageUploadField';
 import CampaignListSupabase from './components/CampaignListSupabase';
+import ToastContainer from './components/ToastContainer';
 
 function App() {
   // Wagmi hooks for contract integration
   const { address: walletAddress, isConnected: isWalletConnected, chainId } = useAccount();
   
   const [isSignedIn, setIsSignedIn] = useState(false);
-  const [paymentStatus, setPaymentStatus] = useState('');
   const [paymentId, setPaymentId] = useState('');
   const [theme, setTheme] = useState('light');
   
@@ -32,6 +32,15 @@ function App() {
     refetch: null
   });
 
+  // Log when campaign data changes
+  useEffect(() => {
+    console.log('📡 App.js received campaign data update:', {
+      campaigns: campaignData.campaigns.length,
+      loading: campaignData.loading,
+      hasRefetch: !!campaignData.refetch
+    });
+  }, [campaignData]);
+
   // Sub Account states
   const [subAccount, setSubAccount] = useState(null);
   const [hasSubAccount, setHasSubAccount] = useState(false);
@@ -40,6 +49,21 @@ function App() {
 
   // Crowdfunding states
   const [selectedAmounts, setSelectedAmounts] = useState({});
+
+  // Toast notification system
+  const [toasts, setToasts] = useState([]);
+
+  // Toast management functions
+  const addToast = (message, type = 'info', autoRemove = true) => {
+    const id = Date.now() + Math.random();
+    const newToast = { id, message, type, autoRemove };
+    setToasts(prev => [...prev, newToast]);
+    return id;
+  };
+
+  const removeToast = (id) => {
+    setToasts(prev => prev.filter(toast => toast.id !== id));
+  };
 
   // Quick amount options
   const quickAmounts = [1, 5, 10, 100];
@@ -286,41 +310,52 @@ function App() {
 
   // Show different campaigns based on login status
   const campaigns = isSignedIn 
-    ? [...campaignData.campaigns, ...demoCampaigns.slice(0, 2)] // Real + 2 demo when logged in
+    ? [...campaignData.campaigns, ...demoCampaigns] // Real + all demo when logged in
     : demoCampaigns; // Only demo campaigns when not logged in
+    
+  // FIXED: Don't fallback to demo only when loading - show demo + real (or just demo while loading)
+  const finalCampaigns = campaigns;
   
   console.log('✅ CAMPAIGN DISPLAY LOGIC');
   console.log('User logged in:', isSignedIn);
+  console.log('Real campaigns available:', campaignData.campaigns.length);
+  console.log('Campaign data loading:', campaignData.loading);
+  console.log('Real campaigns:', campaignData.campaigns);
+  console.log('Demo campaigns count:', demoCampaigns.length);
+  console.log('campaigns (merged):', campaigns.length);
+  console.log('finalCampaigns:', finalCampaigns.length);
   if (isSignedIn) {
-    console.log('Showing: Real campaigns + 2 demo');
-    console.log('Real campaigns count:', campaignData.campaigns.length);
-    console.log('Demo campaigns shown:', demoCampaigns.slice(0, 2).length);
+    console.log('Logged in mode: Real + demo campaigns');
+    if (campaignData.campaigns.length === 0) {
+      console.log('⚠️ No real campaigns found yet - showing demo');
+    } else {
+      console.log('✅ Real campaigns found:', campaignData.campaigns.map(c => ({ id: c.id, title: c.title, raised: c.raised, backers: c.backers })));
+    }
   } else {
-    console.log('Showing: Only demo campaigns (user not logged in)');
-    console.log('Demo campaigns shown:', demoCampaigns.length);
+    console.log('Guest mode: Demo campaigns only');
   }
-  console.log('Total campaigns displayed:', campaigns.length);
+  console.log('FINAL campaigns that will be displayed:', finalCampaigns.map(c => ({ id: c.id, title: c.title, isDemo: c.isDemo || false })));
 
   // Filter campaigns based on status
   const getFilteredCampaigns = () => {
     switch (selectedFilter) {
       case 'Active':
-        return campaigns.filter(c => c.status === 'Active');
+        return finalCampaigns.filter(c => c.status === 'Active');
       case 'Nearly Funded':
-        return campaigns.filter(c => c.status === 'Nearly Funded');
+        return finalCampaigns.filter(c => c.status === 'Nearly Funded');
       case 'Completed - Funded':
-        return campaigns.filter(c => c.status === 'Completed - Funded');
+        return finalCampaigns.filter(c => c.status === 'Completed - Funded');
       case 'Completed - Unfunded':
-        return campaigns.filter(c => c.status === 'Completed - Unfunded');
+        return finalCampaigns.filter(c => c.status === 'Completed - Unfunded');
       default:
-        return campaigns;
+        return finalCampaigns;
     }
   };
 
   const filteredCampaigns = getFilteredCampaigns();
 
   // Popular campaigns for right sidebar
-  const popularCampaigns = campaigns
+  const popularCampaigns = finalCampaigns
     .filter(c => c.status === 'Active')
     .sort((a, b) => b.backers - a.backers)
     .slice(0, 3);
@@ -337,10 +372,10 @@ function App() {
       setUniversalAddress(universalAddr);
       setIsSignedIn(true);
       await checkForSubAccount(universalAddr);
-      setPaymentStatus('✅ Connected to Base Account');
+      addToast('✅ Connected to Base Account', 'success');
     } catch (error) {
       console.error('Sign in failed:', error);
-      setPaymentStatus('❌ Connection failed');
+      addToast('❌ Connection failed', 'error');
     }
   };
 
@@ -390,10 +425,10 @@ function App() {
 
       setSubAccount(newSubAccount);
       setHasSubAccount(true);
-      setPaymentStatus('✅ Sub Account created! Now you can make seamless donations.');
+      addToast('✅ Sub Account created! Now you can make seamless donations.', 'success');
     } catch (error) {
       console.error('Sub Account creation failed:', error);
-      setPaymentStatus('❌ Sub Account creation failed');
+      addToast('❌ Sub Account creation failed', 'error');
     } finally {
       setSubAccountLoading(false);
     }
@@ -430,7 +465,7 @@ function App() {
       const PLATFORM_ADDRESS = getContractAddress(8453);
       const provider = sdk.getProvider(); // Define provider once at the top
       
-      setPaymentStatus(`💰 Step 1/3: Getting ${selectedAmount} USDC via BasePay for campaign "${campaign.title}"...`);
+      addToast(`💰 Step 1/3: Getting ${selectedAmount} USDC via BasePay for campaign "${campaign.title}"...`, 'info');
       
       // Step 1: Use BasePay to get USDC to the user's Base Account wallet
       // NOTE: BasePay doesn't know this is for crowdfunding - it just shows "+X USDC" 
@@ -442,13 +477,13 @@ function App() {
       });
 
       setPaymentId(id);
-      setPaymentStatus(`✅ Step 1/3: BasePay successful! (You saw "+${selectedAmount} USDC" - that's normal) Now approving for campaign pledge...`);
+      addToast(`✅ Step 1/3: BasePay successful! (You saw "+${selectedAmount} USDC" - that's normal) Now approving for campaign pledge...`, 'success');
       
       // Wait a moment for BasePay to complete
       await new Promise(resolve => setTimeout(resolve, 3000));
       
       // Check USDC balance before approve
-      setPaymentStatus(`🔍 Checking USDC balance before approve...`);
+      addToast(`🔍 Checking USDC balance before approve...`, 'info');
       const erc20BalanceAbi = [
         {
           name: 'balanceOf',
@@ -482,12 +517,12 @@ function App() {
         }
       } catch (error) {
         console.error('Error checking balance:', error);
-        setPaymentStatus(`❌ Balance check failed: ${error.message}`);
+        addToast(`❌ Balance check failed: ${error.message}`, 'error');
         return;
       }
       
       // Step 2: Approve USDC spending by the crowdfunding contract
-      setPaymentStatus(`🔐 Step 2/3: Approving USDC spending...`);
+      addToast(`🔐 Step 2/3: Approving USDC spending...`, 'info');
       
       // MUST call eth_requestAccounts first!
       console.log('🔐 Requesting accounts for approve transaction...');
@@ -540,13 +575,13 @@ function App() {
       });
       
       console.log('🔐 Approve transaction sent:', approveTxHash);
-      setPaymentStatus(`✅ Step 2/3: USDC approve sent! Waiting for confirmation...`);
+      addToast(`✅ Step 2/3: USDC approve sent! Waiting for confirmation...`, 'success');
       
       // Wait longer for approve transaction to be confirmed
       await new Promise(resolve => setTimeout(resolve, 8000)); // Increased from 3 to 8 seconds
       
       // Verify that approve worked by checking allowance
-      setPaymentStatus(`🔍 Verifying USDC approval...`);
+      addToast(`🔍 Verifying USDC approval...`, 'info');
       const erc20AllowanceAbi = [
         {
           name: 'allowance',
@@ -583,14 +618,14 @@ function App() {
         }
       } catch (error) {
         console.error('Error checking allowance:', error);
-        setPaymentStatus(`❌ Allowance verification failed: ${error.message}`);
+        addToast(`❌ Allowance verification failed: ${error.message}`, 'error');
         return;
       }
       
-      setPaymentStatus(`✅ Step 2/3: USDC approved! Now pledging to campaign...`);
+      addToast(`✅ Step 2/3: USDC approved! Now pledging to campaign...`, 'success');
       
       // Step 3: Call pledge() function on crowdfunding contract
-      setPaymentStatus(`🎯 Step 3/3: Pledging ${selectedAmount} USDC to "${campaign.title}"...`);
+      addToast(`🎯 Step 3/3: Pledging ${selectedAmount} USDC to "${campaign.title}"...`, 'info');
       
       // Ensure accounts are still available
       console.log('🎯 Ensuring accounts for pledge transaction...');
@@ -614,17 +649,17 @@ function App() {
         }]
       });
 
-      setPaymentStatus(`🎉 Pledge successful! ${selectedAmount} USDC pledged to "${campaign.title}"`);
+      addToast(`🎉 Pledge successful! ${selectedAmount} USDC pledged to "${campaign.title}"`, 'success');
       
       // Refresh campaigns to show updated amounts - wait longer for blockchain confirmation
       if (campaignData.refetch) {
-        setPaymentStatus(`🎉 Pledge successful! Refreshing campaign data...`);
+        addToast(`🎉 Pledge successful! Refreshing campaign data...`, 'success');
         setTimeout(() => campaignData.refetch(), 5000); // Longer delay for blockchain confirmation
       }
       
     } catch (error) {
       console.error('BasePay pledge failed:', error);
-      setPaymentStatus(`❌ Pledge failed: ${error.message}`);
+      addToast(`❌ Pledge failed: ${error.message}`, 'error');
     }
   };
 
@@ -649,7 +684,7 @@ function App() {
       const PLATFORM_ADDRESS = getContractAddress(8453);
       const provider = sdk.getProvider();
       
-      setPaymentStatus(`🎯 Pledging ${selectedAmount} USDC to "${campaign.title}" via BasePay...`);
+      addToast(`🎯 Pledging ${selectedAmount} USDC to "${campaign.title}" via BasePay...`, 'info');
       
       // FORCE Base Mainnet network first!
       try {
@@ -675,7 +710,7 @@ function App() {
       await provider.request({ method: 'eth_requestAccounts' });
       
       // Check current allowance first
-      setPaymentStatus(`🔍 Checking USDC allowance...`);
+      addToast(`🔍 Checking USDC allowance...`, 'info');
       
       const allowanceData = encodeFunctionData({
         abi: [{
@@ -704,7 +739,7 @@ function App() {
       
       // If allowance is insufficient, approve once for a large amount
       if (currentAllowance < amountInWei) {
-        setPaymentStatus(`🔐 One-time USDC approval needed...`);
+        addToast(`🔐 One-time USDC approval needed...`, 'info');
         
         const largeAmount = parseUnits('1000000', 6); // 1M USDC allowance
         
@@ -732,12 +767,12 @@ function App() {
           }]
         });
         
-        setPaymentStatus(`✅ Approved! Now pledging...`);
+        addToast(`✅ Approved! Now pledging...`, 'success');
         await new Promise(resolve => setTimeout(resolve, 5000));
       }
       
       // Now pledge directly to campaign
-      setPaymentStatus(`🎯 Pledging ${selectedAmount} USDC to "${campaign.title}"...`);
+      addToast(`🎯 Pledging ${selectedAmount} USDC to "${campaign.title}"...`, 'info');
       
       const pledgeData = encodeFunctionData({
         abi: contractAbi,
@@ -756,7 +791,7 @@ function App() {
       });
       
       console.log('✅ Pledge transaction:', pledgeTx);
-      setPaymentStatus(`🎉 Success! ${selectedAmount} USDC pledged to "${campaign.title}"`);
+      addToast(`🎉 Success! ${selectedAmount} USDC pledged to "${campaign.title}"`, 'success');
       
       // Refresh campaigns
       if (campaignData.refetch) {
@@ -765,7 +800,7 @@ function App() {
       
     } catch (error) {
       console.error('BasePay pledge failed:', error);
-      setPaymentStatus(`❌ Pledge failed: ${error.message}`);
+      addToast(`❌ Pledge failed: ${error.message}`, 'error');
     }
   };
 
@@ -790,7 +825,7 @@ function App() {
       const selectedAmount = getAmountForCampaign(campaign.id);
       const amountInWei = parseUnits(selectedAmount, 6); // USDC has 6 decimals
       
-      setPaymentStatus(`Processing ${selectedAmount} USDC pledge to blockchain...`);
+      addToast(`Processing ${selectedAmount} USDC pledge to blockchain...`, 'info');
 
       // Call the real contract pledge function using Base Account!
       await writeContractAsync({
@@ -802,28 +837,28 @@ function App() {
         chain: { id: 8453 }, // Force Base Mainnet
       });
 
-      setPaymentStatus('✅ Pledge successful!');
+      addToast('✅ Pledge successful!', 'success');
 
     } catch (error) {
       console.error('Direct pledge failed:', error);
       alert('Pledge failed: ' + error.message);
-      setPaymentStatus('❌ Direct pledge failed');
+      addToast('❌ Direct pledge failed', 'error');
     }
   };
 
   // Handle payment status check
   const handleCheckStatus = async () => {
     if (!paymentId) {
-      setPaymentStatus('No payment ID found. Please make a payment first.');
+      addToast('No payment ID found. Please make a payment first.', 'error');
       return;
     }
 
     try {
       const { status } = await getPaymentStatus({ id: paymentId });
-      setPaymentStatus(`Payment status: ${status}`);
+      addToast(`Payment status: ${status}`, 'info');
     } catch (error) {
       console.error('Status check failed:', error);
-      setPaymentStatus('Status check failed');
+      addToast('Status check failed', 'error');
     }
   };
 
@@ -849,7 +884,7 @@ function App() {
   // Handle About donation (Buy us coffee)
   const handleAboutDonation = async () => {
     try {
-      setPaymentStatus('Processing coffee donation...');
+      addToast('Processing coffee donation...', 'info');
       
       const { id } = await pay({
         amount: '5', // 5 USDC for coffee
@@ -858,10 +893,10 @@ function App() {
       });
 
       setPaymentId(id);
-      setPaymentStatus('☕ Thank you for buying us coffee! 5 USDC donated to Fundly team');
+      addToast('☕ Thank you for buying us coffee! 5 USDC donated to Fundly team', 'success');
     } catch (error) {
       console.error('Coffee donation failed:', error);
-      setPaymentStatus('❌ Coffee donation failed');
+      addToast('❌ Coffee donation failed', 'error');
     }
   };
 
@@ -1017,7 +1052,21 @@ function App() {
   };
 
   return (
-    <div style={styles.container}>
+    <>
+      {/* Toast notifications */}
+      <ToastContainer toasts={toasts} removeToast={removeToast} />
+      
+      {/* CSS for loading animation */}
+      <style>
+        {`
+          @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+          }
+        `}
+      </style>
+      
+      <div style={styles.container}>
       {/* Header */}
       <div style={styles.header}>
         <div style={styles.logo}>
@@ -1170,7 +1219,7 @@ function App() {
                       setUniversalAddress('');
                       setSubAccount(null);
                       setHasSubAccount(false);
-                      setPaymentStatus('👋 Logged out successfully');
+                      addToast('👋 Logged out successfully', 'success');
                     }}
                     style={{
                       padding: '4px 8px',
@@ -1195,8 +1244,7 @@ function App() {
                 <div 
                   onClick={() => {
                     navigator.clipboard.writeText(universalAddress);
-                    setPaymentStatus('📋 Address copied to clipboard!');
-                    setTimeout(() => setPaymentStatus(''), 2000);
+                                    addToast('📋 Address copied to clipboard!', 'success');
                   }}
                   style={{ 
                     fontSize: '10px', 
@@ -1254,17 +1302,7 @@ function App() {
 
               
 
-              {paymentStatus && (
-                <div style={{
-                  ...styles.card,
-                  backgroundColor: paymentStatus.includes('✅') ? 'rgba(40, 167, 69, 0.2)' : 
-                                  paymentStatus.includes('❌') ? 'rgba(220, 53, 69, 0.2)' : 
-                                  'rgba(255, 193, 7, 0.2)',
-                  fontSize: '12px'
-                }}>
-                  {paymentStatus}
-                </div>
-              )}
+
 
               {paymentId && (
                 <div style={styles.card}>
@@ -1418,6 +1456,57 @@ function App() {
           )}
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%', maxWidth: '900px' }}>
+            
+            {/* Loading indicator for real campaigns */}
+            {isSignedIn && campaignData.loading && (
+              <div style={{
+                ...styles.card,
+                textAlign: 'center',
+                padding: '40px 20px',
+                backgroundColor: dark ? 'rgba(59, 130, 246, 0.1)' : 'rgba(59, 130, 246, 0.05)',
+                borderLeft: '4px solid #3b82f6',
+                marginBottom: '10px'
+              }}>
+                <div style={{ 
+                  fontSize: '32px', 
+                  marginBottom: '16px',
+                  animation: 'spin 2s linear infinite'
+                }}>⏳</div>
+                <div style={{ 
+                  fontSize: '18px', 
+                  fontWeight: 'bold', 
+                  marginBottom: '8px', 
+                  color: '#2563eb' 
+                }}>
+                  Loading Real Campaigns from Base Mainnet...
+                </div>
+                <div style={{ 
+                  fontSize: '14px', 
+                  opacity: 0.8, 
+                  lineHeight: '1.5',
+                  maxWidth: '450px',
+                  margin: '0 auto'
+                }}>
+                  {campaignData.campaigns.length === 0 ? (
+                    // Phase 1: Initial loading
+                    <>
+                      🚀 <strong>Phase 1:</strong> Fast campaign fetch<br/>
+                      🔍 Getting campaign data from Base Mainnet<br/>
+                      <em>Usually takes ~500ms...</em>
+                    </>
+                  ) : (
+                    // Phase 2: Backers counting
+                    <>
+                      👥 <strong>Phase 2:</strong> Counting backers<br/>
+                      📊 Analyzing blockchain events for each campaign<br/>
+                      <em>Almost done, counting backers...</em>
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Campaigns list */}
             {filteredCampaigns.map(campaign => (
               <div key={campaign.id} style={{
                 ...styles.card,
@@ -1526,7 +1615,11 @@ function App() {
                     
                     <div style={{ marginBottom: '12px' }}>
                       <div style={{ fontSize: '13px', opacity: 0.7, marginBottom: '12px' }}>
-                        👥 {campaign.backers} backers • ⏰ {campaign.daysLeft > 0 ? `${campaign.daysLeft} days left` : 'Campaign ended'}
+                        👥 {
+                          campaign.backers === 0 && !campaign.isDemo && isSignedIn && campaignData.loading
+                            ? <span style={{ color: '#3b82f6', fontStyle: 'italic' }}>counting backers...</span>
+                            : `${campaign.backers} backers`
+                        } • ⏰ {campaign.daysLeft > 0 ? `${campaign.daysLeft} days left` : 'Campaign ended'}
                       </div>
                       
                       {campaign.status === 'Active' && (
@@ -1609,7 +1702,7 @@ function App() {
             ))}
             
             {/* Info banner for logged users about demo campaigns */}
-            {isSignedIn && campaignData.campaigns.length > 0 && (
+            {isSignedIn && finalCampaigns.some(c => c.isDemo) && (
               <div style={{
                 ...styles.card,
                 padding: '12px 16px',
@@ -1685,8 +1778,7 @@ function App() {
             <div 
               onClick={() => {
                 navigator.clipboard.writeText('0xef0B17afD2089Cc34b68F48B892922b113FedcE2');
-                setPaymentStatus('📋 Contract address copied!');
-                setTimeout(() => setPaymentStatus(''), 2000);
+                addToast('📋 Contract address copied!', 'success');
               }}
               style={{ 
                 fontSize: '10px', 
@@ -2382,7 +2474,7 @@ function App() {
                   newCampaign={newCampaign}
                   setNewCampaign={setNewCampaign}
                   setShowCreateModal={setShowCreateModal}
-                  setPaymentStatus={setPaymentStatus}
+                                          addToast={addToast}
                   onCampaignCreated={handleCampaignCreated}
                   isSignedIn={isSignedIn}
                   universalAddress={universalAddress}
@@ -2632,6 +2724,7 @@ function App() {
       )}
        
     </div>
+    </>
   );
 }
 
