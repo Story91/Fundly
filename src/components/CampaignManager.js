@@ -21,6 +21,12 @@ const CampaignManager = ({ onCampaignsUpdate }) => {
   // Get total campaigns from contract using Base Account SDK (like UserDashboard)
   const [totalCampaigns, setTotalCampaigns] = useState(null);
   
+  // Use Alchemy RPC if available for better performance
+  const alchemyBaseRpcUrl = process.env.REACT_APP_ALCHEMY_BASE_RPC_URL;
+  const rpcUrl = alchemyBaseRpcUrl || 'https://mainnet.base.org';
+  
+  console.log('🔧 CampaignManager RPC:', alchemyBaseRpcUrl ? 'ALCHEMY (fast)' : 'PUBLIC (slower)');
+  
   // Initialize SDK for contract interactions
   const sdk = createBaseAccountSDK({
     appName: 'Fundly - Crowdfunding Platform',
@@ -29,7 +35,7 @@ const CampaignManager = ({ onCampaignsUpdate }) => {
       name: 'Base Mainnet',
       network: 'base',
       nativeCurrency: { decimals: 18, name: 'Ether', symbol: 'ETH' },
-      rpcUrls: { default: { http: ['https://mainnet.base.org'] } },
+      rpcUrls: { default: { http: [rpcUrl] } },
       blockExplorers: { default: { name: 'BaseScan', url: 'https://basescan.org' } },
     },
   });
@@ -65,13 +71,83 @@ const CampaignManager = ({ onCampaignsUpdate }) => {
     }
   };
 
-  // Fetch on mount and when chainId changes
+  // SUPER FAST PARALLEL LOADING - like refetch!
   useEffect(() => {
-    fetchTotalCampaigns();
-  }, [targetChainId]);
+    console.log('🚀 CampaignManager mounted - PARALLEL FAST LOADING!');
+    
+    // Start parallel loading strategy
+    startFastParallelLoading();
+    
+  }, []); // No dependencies - always fetch on mount
+  
+  // Also fetch when chainId changes (but not required for initial load)
+  useEffect(() => {
+    if (chainId) {
+      console.log('🔄 ChainId changed, refetching campaigns');
+      fetchTotalCampaigns();
+    }
+  }, [chainId]);
 
   const refetchTotalCampaigns = () => {
     fetchTotalCampaigns();
+  };
+
+  // FAST PARALLEL LOADING STRATEGY - like refetch but without waiting for totalCampaigns
+  const startFastParallelLoading = async () => {
+    console.log('⚡ FAST PARALLEL LOADING START');
+    setCampaignsLoading(true);
+    
+    try {
+      // STRATEGY: Parallel fetch totalCampaigns AND speculative campaign loading
+      // Don't wait for totalCampaigns - start fetching campaigns immediately!
+      
+      console.log('🎯 PARALLEL STRATEGY: fetch totalCampaigns + speculative campaigns');
+      
+      // 1. Start fetching totalCampaigns (don't await - parallel!)
+      const totalPromise = fetchTotalCampaigns();
+      
+      // 2. Speculatively fetch first 10 campaigns (most apps have < 10 campaigns)
+      // This is the key optimization - don't wait for totalCampaigns!
+      const speculativeCampaigns = [];
+      const maxSpeculative = 20; // Fetch first 20 campaigns speculatively
+      
+      console.log(`🚀 Starting speculative fetch of first ${maxSpeculative} campaigns...`);
+      const startTime = Date.now();
+      
+      // Create parallel promises for first N campaigns
+      const campaignPromises = [];
+      for (let i = 1; i <= maxSpeculative; i++) {
+        campaignPromises.push(
+          fetchSingleCampaignFast(i).catch(error => {
+            console.log(`Campaign ${i} not found (expected):`, error.message);
+            return null; // Return null for non-existent campaigns
+          })
+        );
+      }
+      
+      // Execute all campaign fetches in parallel
+      console.log(`⚡ Executing ${campaignPromises.length} parallel campaign fetches...`);
+      const results = await Promise.all(campaignPromises);
+      
+      // Filter out null results (non-existent campaigns)
+      const validCampaigns = results.filter(campaign => campaign !== null);
+      
+      const endTime = Date.now();
+      console.log(`🎯 PARALLEL STRATEGY COMPLETE: ${validCampaigns.length} campaigns in ${endTime - startTime}ms`);
+      
+      // Update immediately with found campaigns
+      setRealCampaigns(validCampaigns);
+      setCampaignsLoading(false);
+      
+      // Wait for totalCampaigns to complete (for accuracy)
+      await totalPromise;
+      console.log(`📊 TotalCampaigns confirmed: ${totalCampaigns} (speculative found: ${validCampaigns.length})`);
+      
+    } catch (error) {
+      console.error('❌ Fast parallel loading failed:', error);
+      setCampaignsLoading(false);
+      setRealCampaigns([]);
+    }
   };
 
   // Debug logging
@@ -143,10 +219,10 @@ const CampaignManager = ({ onCampaignsUpdate }) => {
     }
   };
 
-  // Create viem client for reading events
+  // Create viem client for reading events - use Alchemy if available
   const publicClient = createPublicClient({
     chain: base,
-    transport: http('https://mainnet.base.org')
+    transport: http(rpcUrl) // Use same optimized RPC as SDK
   });
 
   // Function to get backers count for a campaign from contract events

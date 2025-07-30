@@ -20,6 +20,12 @@ const CreateCampaignButton = ({
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [uploadedImageUrl, setUploadedImageUrl] = useState(null);
 
+  // Use Alchemy RPC if available for better performance
+  const alchemyBaseRpcUrl = process.env.REACT_APP_ALCHEMY_BASE_RPC_URL;
+  const rpcUrl = alchemyBaseRpcUrl || 'https://mainnet.base.org';
+  
+  console.log('🔧 CreateCampaignButton RPC:', alchemyBaseRpcUrl ? 'ALCHEMY (fast)' : 'PUBLIC (slower)');
+  
   // Initialize SDK with Base Mainnet network
   const sdk = createBaseAccountSDK({
     appName: 'Fundly - Crowdfunding Platform',
@@ -34,8 +40,8 @@ const CreateCampaignButton = ({
         symbol: 'ETH',
       },
       rpcUrls: {
-              public: { http: ['https://mainnet.base.org'] },
-      default: { http: ['https://mainnet.base.org'] },
+        public: { http: [rpcUrl] },
+        default: { http: [rpcUrl] },
       },
       blockExplorers: {
         etherscan: { name: 'BaseScan', url: 'https://basescan.org' },
@@ -141,10 +147,10 @@ const CreateCampaignButton = ({
 
       setIsCreating(true);
 
-      // Use viem to create a public client for Base Mainnet
+      // Use viem to create a public client for Base Mainnet - use Alchemy if available
       const publicClient = createPublicClient({
-            chain: base,
-    transport: http('https://mainnet.base.org')
+        chain: base,
+        transport: http(rpcUrl) // Use same optimized RPC
       });
 
       // Get the provider from Base Account SDK
@@ -187,7 +193,7 @@ const CreateCampaignButton = ({
                 symbol: 'ETH',
                 decimals: 18,
               },
-              rpcUrls: ['https://mainnet.base.org'],
+              rpcUrls: [rpcUrl],
               blockExplorerUrls: ['https://basescan.org'],
             }],
           });

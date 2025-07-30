@@ -19,12 +19,12 @@ const UserDashboard = ({ styles, dark, isSignedIn, universalAddress }) => {
   // Initialize SDK for contract interactions
   const sdk = createBaseAccountSDK({
     appName: 'Fundly - Crowdfunding Platform',
-    chain: {
+        chain: {
       id: 8453,
-      name: 'Base Mainnet',
+      name: 'Base Mainnet', 
       network: 'base',
       nativeCurrency: { decimals: 18, name: 'Ether', symbol: 'ETH' },
-      rpcUrls: { default: { http: ['https://mainnet.base.org'] } },
+      rpcUrls: { default: { http: [process.env.REACT_APP_ALCHEMY_BASE_RPC_URL || 'https://mainnet.base.org'] } },
       blockExplorers: { default: { name: 'BaseScan', url: 'https://basescan.org' } },
     },
   });

@@ -96,13 +96,19 @@ function App() {
   // Unsplash API configuration
   const UNSPLASH_ACCESS_KEY = 'uGdVJxeg4lsYvDtmfAiTdQtpkkoet2TUVZyz5llER6E';
 
+    // Use Alchemy RPC if available for better performance
+  const alchemyBaseRpcUrl = process.env.REACT_APP_ALCHEMY_BASE_RPC_URL;
+  const rpcUrl = alchemyBaseRpcUrl || 'https://mainnet.base.org';
+  
+  console.log('🔧 App.js RPC:', alchemyBaseRpcUrl ? 'ALCHEMY (fast)' : 'PUBLIC (slower)');
+  
   // Initialize SDK with Base Mainnet network
   const sdk = createBaseAccountSDK({
     appName: 'Fundly - Crowdfunding Platform',
     appLogo: 'https://base.org/logo.png',
     chain: {
       id: 8453, // Base Mainnet
-              name: 'Base Mainnet',
+      name: 'Base Mainnet',
       network: 'base-sepolia',
       nativeCurrency: {
         decimals: 18,
@@ -110,8 +116,8 @@ function App() {
         symbol: 'ETH',
       },
       rpcUrls: {
-        public: { http: ['https://mainnet.base.org'] },
-        default: { http: ['https://mainnet.base.org'] },
+        public: { http: [rpcUrl] },
+        default: { http: [rpcUrl] },
       },
       blockExplorers: {
         etherscan: { name: 'BaseScan', url: 'https://basescan.org' },
@@ -308,26 +314,34 @@ function App() {
     }
   ];
 
-  // Show ALL campaigns to EVERYONE - real campaigns should be visible to all users!
-  // Only login status affects ability to CREATE campaigns and PLEDGE, not VIEWING
-  const campaigns = [...campaignData.campaigns, ...demoCampaigns]; // Always show all campaigns
+  // PRIORITY: Real blockchain campaigns first, demo campaigns only as backup
+  // Demo campaigns are shown only when no real campaigns exist or they're still loading
+  const hasRealCampaigns = campaignData.campaigns.length > 0;
+  const isStillLoading = campaignData.loading;
+  
+  // Show real campaigns if available, otherwise show demo campaigns while loading
+  const campaigns = hasRealCampaigns ? 
+    campaignData.campaigns : // Only real campaigns when available
+    (isStillLoading ? demoCampaigns : []); // Demo campaigns only while loading, empty if no real campaigns found
+    
   const finalCampaigns = campaigns;
   
-  console.log('✅ CAMPAIGN DISPLAY LOGIC - SHOWING ALL CAMPAIGNS TO EVERYONE');
+  console.log('✅ CAMPAIGN DISPLAY LOGIC - BLOCKCHAIN FIRST');
   console.log('User logged in:', isSignedIn);
   console.log('Real campaigns available:', campaignData.campaigns.length);
   console.log('Campaign data loading:', campaignData.loading);
-  console.log('Real campaigns:', campaignData.campaigns);
-  console.log('Demo campaigns count:', demoCampaigns.length);
-  console.log('campaigns (merged):', campaigns.length);
+  console.log('Has real campaigns:', hasRealCampaigns);
+  console.log('Is still loading:', isStillLoading);
+  console.log('Final campaigns source:', hasRealCampaigns ? 'BLOCKCHAIN' : (isStillLoading ? 'DEMO (loading)' : 'EMPTY'));
   console.log('finalCampaigns:', finalCampaigns.length);
-  console.log('📺 All users see: Real blockchain campaigns + demo campaigns');
-  if (campaignData.campaigns.length === 0) {
-    console.log('⚠️ No real campaigns found yet - but showing demo for all users');
+  
+  if (hasRealCampaigns) {
+    console.log('✅ Showing REAL blockchain campaigns:', campaignData.campaigns.map(c => ({ id: c.id, title: c.title, raised: c.raised, backers: c.backers })));
+  } else if (isStillLoading) {
+    console.log('⏳ Still loading - showing demo campaigns as placeholder');
   } else {
-    console.log('✅ Real campaigns found:', campaignData.campaigns.map(c => ({ id: c.id, title: c.title, raised: c.raised, backers: c.backers })));
+    console.log('🔍 No campaigns found on blockchain yet');
   }
-  console.log('FINAL campaigns that will be displayed to ALL users:', finalCampaigns.map(c => ({ id: c.id, title: c.title, isDemo: c.isDemo || false })));
 
   // Filter campaigns based on status
   const getFilteredCampaigns = () => {
@@ -693,7 +707,7 @@ function App() {
               chainId: '0x2105',
               chainName: 'Base Mainnet',
               nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
-              rpcUrls: ['https://mainnet.base.org'],
+              rpcUrls: [rpcUrl],
               blockExplorerUrls: ['https://basescan.org'],
             }],
           });
