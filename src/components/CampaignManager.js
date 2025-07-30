@@ -182,50 +182,19 @@ const CampaignManager = ({ onCampaignsUpdate }) => {
     }, 3000);
   };
 
-  // Helper function to fetch single campaign from real contract using Base Account SDK
+  // Helper function to fetch single campaign from real contract (same method as UserDashboard)
   const fetchSingleCampaign = async (campaignId) => {
     try {
-      // Using Base Account SDK like UserDashboard
-      const provider = sdk.getProvider();
-      
-      const getCampaignData = encodeFunctionData({
+      // Parse real campaign data from contract (same as UserDashboard)
+      const campaignData = await readContract(config, {
+        address: getContractAddress(targetChainId),
         abi: contractAbi,
         functionName: 'getCampaign',
-        args: [campaignId]
+        args: [campaignId],
+        chainId: targetChainId, // Force Base Mainnet
       });
-      
-      const result = await provider.request({
-        method: 'eth_call',
-        params: [{
-          to: getContractAddress(targetChainId),
-          data: getCampaignData
-        }, 'latest']
-      });
-      
-      // Decode campaign data (this is complex, need to parse the struct)
-      // For now, let's log what we get and see if we can parse it
-      console.log(`🔍 Raw campaign ${campaignId} data:`, result);
-      
-      if (!result || result === '0x') return null;
-      
-      // Parse the result - this is a rough implementation
-      // Campaign struct: (address creator, string name, string description, uint256 goal, uint256 deadline, uint256 totalPledged, bool goalReached, bool claimed, bool cancelled, uint256 createdAt)
-      const hex = result.slice(2); // Remove 0x
-      
-      // This is complex - for now let's use a simpler approach
-      // We'll try to get data directly or fallback to mock
-      const campaignData = {
-        creator: '0x589d44F33bd94F5913e59E380b55c83fEfbBE199', // Use known address for now
-        name: 'MySphere.fun – The Social Platform for Tokenized Content',
-        description: 'The Social Platform for Tokenized Content',
-        goal: BigInt(2500000000), // 2500 USDC
-        deadline: BigInt(Math.floor(Date.now() / 1000) + (30 * 24 * 60 * 60)), // 30 days from now
-        totalPledged: BigInt(0),
-        goalReached: false,
-        claimed: false,
-        cancelled: false,
-        createdAt: BigInt(Math.floor(Date.now() / 1000))
-      };
+
+      console.log(`🔍 REAL Campaign ${campaignId} data from contract:`, campaignData);
 
       if (!campaignData) return null;
 
