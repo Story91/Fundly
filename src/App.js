@@ -1076,9 +1076,16 @@ function App() {
       <div style={styles.container}>
       {/* Header */}
       <div style={styles.header}>
-        <div style={styles.logo}>
-          💰 Fundly
-        </div>
+        <img 
+          src="/logo512.png" 
+          alt="Fundly Logo" 
+          style={{
+            width: '60px',
+            height: '60px',
+            borderRadius: '12px',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+          }} 
+        />
         
         {/* Navigation buttons */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
@@ -1520,11 +1527,27 @@ function App() {
                 overflow: 'hidden',
                 transition: 'all 0.3s ease',
                 cursor: 'pointer',
+                position: 'relative',
                 '&:hover': {
                   transform: 'translateY(-4px)',
                   boxShadow: dark ? '0 25px 80px rgba(0,0,0,0.2)' : '0 25px 80px rgba(0,0,0,0.1)'
                 }
               }}>
+                {/* Fundly Logo Watermark */}
+                <img 
+                  src="/logo512.png" 
+                  alt="Fundly" 
+                  style={{
+                    position: 'absolute',
+                    bottom: '16px',
+                    left: '16px',
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '6px',
+                    opacity: 0.4,
+                    zIndex: 1
+                  }} 
+                />
                 <div style={{ display: 'flex', gap: '24px', alignItems: 'stretch' }}>
                   <img 
                     src={campaign.image} 
@@ -1858,17 +1881,28 @@ function App() {
               marginBottom: '32px'
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-                <h2 style={{ 
-                  margin: 0, 
-                  fontSize: '28px', 
-                  fontWeight: '700',
-                  background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  backgroundClip: 'text'
-                }}>
-                  🚀 Create New Campaign
-                </h2>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+              <img 
+                src="/logo512.png" 
+                alt="Fundly Logo" 
+                style={{
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '6px'
+                }} 
+              />
+              <h2 style={{ 
+                margin: 0, 
+                fontSize: '28px', 
+                fontWeight: '700',
+                background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text'
+              }}>
+                🚀 Create New Campaign
+              </h2>
+            </div>
                 <button
                   onClick={() => setShowCreateModal(false)}
                   style={{
@@ -2507,9 +2541,30 @@ function App() {
             width: '450px',
             maxWidth: '90vw'
           }}>
-            <h2 style={{ marginTop: 0, fontSize: '24px', marginBottom: '20px' }}>
-              💰 About Fundly
-            </h2>
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '16px', 
+              marginTop: 0, 
+              marginBottom: '20px' 
+            }}>
+              <img 
+                src="/logo512.png" 
+                alt="Fundly Logo" 
+                style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '6px'
+                }} 
+              />
+              <h2 style={{ 
+                margin: 0, 
+                fontSize: '24px',
+                fontWeight: '700'
+              }}>
+                About Fundly
+              </h2>
+            </div>
             
             <div style={{ fontSize: '16px', lineHeight: '1.6', marginBottom: '24px' }}>
               <p style={{ marginBottom: '16px' }}>
