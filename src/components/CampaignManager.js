@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useAccount, useReadContract, useConfig } from 'wagmi';
 import { readContract } from '@wagmi/core';
+import { createPublicClient, http } from 'viem';
+import { baseSepolia } from 'viem/chains';
 import { CONTRACT_CONFIG, getContractAddress } from '../contracts/contract-config';
 import contractAbi from '../contracts/CrowdfundingPlatform.abi.json';
 
@@ -30,9 +32,9 @@ const CampaignManager = ({ onCampaignsUpdate }) => {
   console.log('totalCampaigns type:', typeof totalCampaigns);
   console.log('totalCampaigns number:', Number(totalCampaigns));
 
-  // Function to fetch real campaigns from contract
-  const fetchRealCampaigns = async () => {
-    console.log('🔍 fetchRealCampaigns called');
+  // Function to fetch real campaigns from contract - WITH FORCED REFRESH
+  const fetchRealCampaigns = async (forceRefresh = false) => {
+    console.log('🔍 fetchRealCampaigns called', forceRefresh ? '(FORCE REFRESH)' : '');
     console.log('totalCampaigns:', totalCampaigns);
     console.log('chainId:', chainId);
     console.log('Number(totalCampaigns):', Number(totalCampaigns));
@@ -42,7 +44,7 @@ const CampaignManager = ({ onCampaignsUpdate }) => {
       setCampaignsLoading(false);
       setRealCampaigns([]);
       if (onCampaignsUpdate) {
-        onCampaignsUpdate({ campaigns: [], loading: false });
+        onCampaignsUpdate({ campaigns: [], loading: false, refetch: refetchFunction });
       }
       return;
     }
@@ -59,19 +61,77 @@ const CampaignManager = ({ onCampaignsUpdate }) => {
       const fetchedCampaigns = await Promise.all(campaignPromises);
       const validCampaigns = fetchedCampaigns.filter(campaign => campaign !== null);
       
+      console.log(`✅ Fetched ${validCampaigns.length} valid campaigns`, forceRefresh ? '(REFRESHED DATA)' : '');
+      
       setRealCampaigns(validCampaigns);
       if (onCampaignsUpdate) {
-        onCampaignsUpdate({ campaigns: validCampaigns, loading: false });
+        onCampaignsUpdate({ campaigns: validCampaigns, loading: false, refetch: refetchFunction });
       }
     } catch (error) {
       console.error('Error fetching campaigns:', error);
       setRealCampaigns([]);
       if (onCampaignsUpdate) {
-        onCampaignsUpdate({ campaigns: [], loading: false });
+        onCampaignsUpdate({ campaigns: [], loading: false, refetch: refetchFunction });
       }
     } finally {
       setCampaignsLoading(false);
     }
+  };
+
+  // Create viem client for reading events
+  const publicClient = createPublicClient({
+    chain: baseSepolia,
+    transport: http('https://sepolia.base.org')
+  });
+
+  // Function to get backers count for a campaign from contract events
+  const getBackersCount = async (campaignId) => {
+    try {
+      // Get all Pledged events for this campaign
+      const pledgeEvents = await publicClient.getLogs({
+        address: getContractAddress(targetChainId),
+        event: {
+          type: 'event',
+          name: 'Pledged',
+          inputs: [
+            { type: 'uint256', name: 'campaignId', indexed: true },
+            { type: 'address', name: 'backer', indexed: true },
+            { type: 'uint256', name: 'amount' }
+          ]
+        },
+        args: {
+          campaignId: BigInt(campaignId)
+        },
+        fromBlock: 'earliest',
+        toBlock: 'latest'
+      });
+
+      // Count unique backers (addresses)
+      const uniqueBackers = new Set();
+      pledgeEvents.forEach(event => {
+        if (event.args && event.args.backer) {
+          uniqueBackers.add(event.args.backer.toLowerCase());
+        }
+      });
+
+      const backersCount = uniqueBackers.size;
+      console.log(`📊 Campaign ${campaignId} has ${backersCount} unique backers from ${pledgeEvents.length} pledges`);
+      
+      return backersCount;
+    } catch (error) {
+      console.error(`Error getting backers for campaign ${campaignId}:`, error);
+      return 0;
+    }
+  };
+
+  // Create refetch function 
+  const refetchFunction = async () => {
+    console.log('🔄 Manual refetch triggered');
+    await refetchTotalCampaigns();
+    // Force a fresh fetch after delay to allow blockchain to update
+    setTimeout(() => {
+      fetchRealCampaigns(true); // Force refresh
+    }, 3000);
   };
 
   // Helper function to fetch single campaign from real contract
@@ -92,6 +152,23 @@ const CampaignManager = ({ onCampaignsUpdate }) => {
       const deadline = Number(campaignData.deadline);
       const daysLeft = deadline > now ? Math.ceil((deadline - now) / (24 * 60 * 60)) : 0;
       
+      // Get real backers count from contract events
+      const backersCount = await getBackersCount(campaignId);
+
+      // Debug logging for campaign data
+      console.log(`🔍 Campaign ${campaignId} data from contract:`, {
+        rawTotalPledged: campaignData.totalPledged,
+        rawGoal: campaignData.goal,
+        totalPledgedNumber: Number(campaignData.totalPledged),
+        goalNumber: Number(campaignData.goal),
+        raisedUSDC: Number(campaignData.totalPledged) / 1000000,
+        goalUSDC: Number(campaignData.goal) / 1000000,
+        backersCount: backersCount,
+        goalReached: campaignData.goalReached,
+        cancelled: campaignData.cancelled,
+        claimed: campaignData.claimed
+      });
+      
       return {
         id: campaignId,
         title: campaignData.name,
@@ -100,7 +177,7 @@ const CampaignManager = ({ onCampaignsUpdate }) => {
         creator: campaignData.creator,
         raised: Number(campaignData.totalPledged) / 1000000, // Convert from wei to USDC
         goal: Number(campaignData.goal) / 1000000, // Convert from wei to USDC
-        backers: 0, // TODO: Calculate from contract events
+        backers: backersCount, // ✅ Real backers count from contract events!
         daysLeft: daysLeft,
         category: "Technology", // Default category
         status: campaignData.cancelled ? "Cancelled" : 
@@ -119,16 +196,13 @@ const CampaignManager = ({ onCampaignsUpdate }) => {
     fetchRealCampaigns();
   }, [totalCampaigns, chainId]);
 
-  // Expose refetch function for parent component
+  // Expose refetch function for parent component with improved refresh
   useEffect(() => {
     if (onCampaignsUpdate) {
       onCampaignsUpdate({ 
         campaigns: realCampaigns, 
         loading: campaignsLoading,
-        refetch: () => {
-          refetchTotalCampaigns();
-          setTimeout(fetchRealCampaigns, 2000);
-        }
+        refetch: refetchFunction
       });
     }
   }, [realCampaigns, campaignsLoading]);

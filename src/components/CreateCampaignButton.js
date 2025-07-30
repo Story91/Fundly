@@ -96,8 +96,13 @@ const CreateCampaignButton = ({
 
   // Handle Create Campaign form submission - WITH REAL CONTRACT!
   const handleCreateCampaignSubmit = async () => {
-    if (!newCampaign.title || !newCampaign.description || !newCampaign.goal || !newCampaign.creatorNickname) {
-      alert('Please fill in all required fields (Title, Description, Goal, and Creator Nickname)');
+    if (!newCampaign.title || !newCampaign.description || !newCampaign.goal || !newCampaign.creatorNickname || !newCampaign.duration) {
+      alert('Please fill in all required fields (Title, Description, Goal, Creator Nickname, and Duration)');
+      return;
+    }
+
+    if (Number(newCampaign.duration) < 1 || Number(newCampaign.duration) > 365) {
+      alert('Campaign duration must be between 1 and 365 days');
       return;
     }
 
@@ -130,7 +135,7 @@ const CreateCampaignButton = ({
 
       // Convert to contract format
       const goalInWei = parseUnits(newCampaign.goal, 6); // USDC has 6 decimals
-      const durationInSeconds = 30 * 24 * 60 * 60; // 30 days default
+      const durationInSeconds = Number(newCampaign.duration) * 24 * 60 * 60; // Convert days to seconds
       
       setPaymentStatus('Creating campaign on blockchain...');
 
@@ -228,7 +233,7 @@ const CreateCampaignButton = ({
   useEffect(() => {
     if (txHash && typeof txHash === 'string') {
       setShowCreateModal(false);
-      setNewCampaign({ title: '', description: '', goal: '', category: 'Technology', image: '', creatorNickname: '' });
+      setNewCampaign({ title: '', description: '', goal: '', category: 'Technology', image: '', creatorNickname: '', duration: '30' });
       setIsCreating(false);
       
       // Notify parent component to refresh campaigns

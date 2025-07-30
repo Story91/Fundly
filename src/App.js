@@ -4,7 +4,7 @@ import { SignInWithBaseButton, BasePayButton } from '@base-org/account-ui/react'
 
 // Wagmi imports for real contract integration
 import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
-import { parseUnits, formatUnits } from 'viem';
+import { parseUnits, formatUnits, encodeFunctionData } from 'viem';
 import { CONTRACT_CONFIG, getContractAddress } from './contracts/contract-config';
 import contractAbi from './contracts/CrowdfundingPlatform.abi.json';
 
@@ -59,7 +59,8 @@ function App() {
     goal: '',
     category: 'Technology',
     image: '',
-    creatorNickname: ''
+    creatorNickname: '',
+    duration: '30' // Duration in days, default 30 days
   });
 
   // Unsplash integration states
@@ -350,8 +351,8 @@ function App() {
     return selectedAmounts[campaignId] || '1';
   };
 
-  // BasePay function - NOW INTEGRATED WITH REAL CONTRACT!
-  const handleBasePay = async (campaign) => {
+  // OLD 3-step version (keeping for reference)
+  const handleBasePayOld = async (campaign) => {
     if (!isSignedIn) {
       alert('Please sign in with Base Account first to use BasePay');
       return;
@@ -364,9 +365,18 @@ function App() {
 
     try {
       const selectedAmount = getAmountForCampaign(campaign.id);
-      setPaymentStatus(`Processing ${selectedAmount} USDC pledge via BasePay...`);
+      const amountInWei = parseUnits(selectedAmount, 6); // USDC has 6 decimals
       
-      // First, use BasePay to get USDC to the user's Base Account wallet
+      // USDC token address on Base Sepolia
+      const USDC_ADDRESS = '0x036CbD53842c5426634e7929541eC2318f3dCF7e';
+      const PLATFORM_ADDRESS = getContractAddress(84532);
+      const provider = sdk.getProvider(); // Define provider once at the top
+      
+      setPaymentStatus(`💰 Step 1/3: Getting ${selectedAmount} USDC via BasePay for campaign "${campaign.title}"...`);
+      
+      // Step 1: Use BasePay to get USDC to the user's Base Account wallet
+      // NOTE: BasePay doesn't know this is for crowdfunding - it just shows "+X USDC" 
+      // The actual pledge to campaign happens in Steps 2-3
       const { id } = await pay({
         amount: selectedAmount, // Use selected amount (1, 5, 10, or 100)
         to: universalAddress, // Send to Base Account address
@@ -374,18 +384,334 @@ function App() {
       });
 
       setPaymentId(id);
-      setPaymentStatus(`✅ BasePay successful! Now you can pledge ${selectedAmount} USDC to "${campaign.title}". Please approve the transaction to complete your pledge.`);
+      setPaymentStatus(`✅ Step 1/3: BasePay successful! (You saw "+${selectedAmount} USDC" - that's normal) Now approving for campaign pledge...`);
       
-      // Note: For real pledging, user would need to:
-      // 1. Approve USDC spending
-      // 2. Call pledge() function on contract
-      // This requires a 2-step process which we could implement with additional UI
+      // Wait a moment for BasePay to complete
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      
+      // Check USDC balance before approve
+      setPaymentStatus(`🔍 Checking USDC balance before approve...`);
+      const erc20BalanceAbi = [
+        {
+          name: 'balanceOf',
+          type: 'function',
+          inputs: [{ name: 'account', type: 'address' }],
+          outputs: [{ name: '', type: 'uint256' }]
+        }
+      ];
+      
+      const balanceData = encodeFunctionData({
+        abi: erc20BalanceAbi,
+        functionName: 'balanceOf',
+        args: [universalAddress]
+      });
+      
+      try {
+        const balanceResult = await provider.request({
+          method: 'eth_call',
+          params: [{
+            to: USDC_ADDRESS,
+            data: balanceData
+          }, 'latest']
+        });
+        
+        const balance = BigInt(balanceResult);
+        const balanceUsdc = Number(balance) / 1000000;
+        console.log('💰 Current USDC balance:', balanceUsdc, 'USDC');
+        
+        if (balance < amountInWei) {
+          throw new Error(`Insufficient USDC balance. Have: ${balanceUsdc} USDC, Need: ${selectedAmount} USDC`);
+        }
+      } catch (error) {
+        console.error('Error checking balance:', error);
+        setPaymentStatus(`❌ Balance check failed: ${error.message}`);
+        return;
+      }
+      
+      // Step 2: Approve USDC spending by the crowdfunding contract
+      setPaymentStatus(`🔐 Step 2/3: Approving USDC spending...`);
+      
+      // MUST call eth_requestAccounts first!
+      console.log('🔐 Requesting accounts for approve transaction...');
+      await provider.request({ method: 'eth_requestAccounts' });
+      
+      // Switch to Base Sepolia if needed
+      try {
+        await provider.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: '0x14a34' }], // Base Sepolia chainId in hex
+        });
+      } catch (switchError) {
+        console.log('Network switch error (might be already on Base Sepolia):', switchError);
+      }
+      
+      // USDC approve transaction using proper encoding
+      const erc20ApproveAbi = [
+        {
+          name: 'approve',
+          type: 'function',
+          inputs: [
+            { name: 'spender', type: 'address' },
+            { name: 'amount', type: 'uint256' }
+          ],
+          outputs: [{ name: '', type: 'bool' }]
+        }
+      ];
+      
+      const approveData = encodeFunctionData({
+        abi: erc20ApproveAbi,
+        functionName: 'approve',
+        args: [PLATFORM_ADDRESS, amountInWei]
+      });
+      
+      console.log('🔐 Sending approve transaction for', selectedAmount, 'USDC...');
+      console.log('🔐 Approve args:', {
+        spender: PLATFORM_ADDRESS,
+        amount: amountInWei.toString(),
+        amountHex: '0x' + amountInWei.toString(16)
+      });
+      
+      const approveTxHash = await provider.request({
+        method: 'eth_sendTransaction',
+        params: [{
+          from: universalAddress,
+          to: USDC_ADDRESS,
+          data: approveData,
+          gas: '0x15f90', // 90000 gas
+        }]
+      });
+      
+      console.log('🔐 Approve transaction sent:', approveTxHash);
+      setPaymentStatus(`✅ Step 2/3: USDC approve sent! Waiting for confirmation...`);
+      
+      // Wait longer for approve transaction to be confirmed
+      await new Promise(resolve => setTimeout(resolve, 8000)); // Increased from 3 to 8 seconds
+      
+      // Verify that approve worked by checking allowance
+      setPaymentStatus(`🔍 Verifying USDC approval...`);
+      const erc20AllowanceAbi = [
+        {
+          name: 'allowance',
+          type: 'function',
+          inputs: [
+            { name: 'owner', type: 'address' },
+            { name: 'spender', type: 'address' }
+          ],
+          outputs: [{ name: '', type: 'uint256' }]
+        }
+      ];
+      
+      const allowanceData = encodeFunctionData({
+        abi: erc20AllowanceAbi,
+        functionName: 'allowance',
+        args: [universalAddress, PLATFORM_ADDRESS]
+      });
+      
+      try {
+        const allowanceResult = await provider.request({
+          method: 'eth_call',
+          params: [{
+            to: USDC_ADDRESS,
+            data: allowanceData
+          }, 'latest']
+        });
+        
+        const allowance = BigInt(allowanceResult);
+        const allowanceUsdc = Number(allowance) / 1000000;
+        console.log('🔐 Current allowance:', allowanceUsdc, 'USDC');
+        
+        if (allowance < amountInWei) {
+          throw new Error(`Insufficient allowance. Approved: ${allowanceUsdc} USDC, Need: ${selectedAmount} USDC. Approve transaction may have failed.`);
+        }
+      } catch (error) {
+        console.error('Error checking allowance:', error);
+        setPaymentStatus(`❌ Allowance verification failed: ${error.message}`);
+        return;
+      }
+      
+      setPaymentStatus(`✅ Step 2/3: USDC approved! Now pledging to campaign...`);
+      
+      // Step 3: Call pledge() function on crowdfunding contract
+      setPaymentStatus(`🎯 Step 3/3: Pledging ${selectedAmount} USDC to "${campaign.title}"...`);
+      
+      // Ensure accounts are still available
+      console.log('🎯 Ensuring accounts for pledge transaction...');
+      await provider.request({ method: 'eth_requestAccounts' });
+      
+      // Use the same provider approach as Steps 1-2 instead of wagmi
+      const pledgeData = encodeFunctionData({
+        abi: contractAbi,
+        functionName: 'pledge',
+        args: [Number(campaign.id), amountInWei]
+      });
+      
+      console.log('🎯 Sending pledge transaction for campaign', campaign.id, 'with amount', selectedAmount, 'USDC...');
+      await provider.request({
+        method: 'eth_sendTransaction',
+        params: [{
+          from: universalAddress,
+          to: PLATFORM_ADDRESS,
+          data: pledgeData,
+          gas: '0x76c0', // 30400 gas limit (same as CreateCampaignButton)
+        }]
+      });
+
+      setPaymentStatus(`🎉 Pledge successful! ${selectedAmount} USDC pledged to "${campaign.title}"`);
+      
+      // Refresh campaigns to show updated amounts - wait longer for blockchain confirmation
+      if (campaignData.refetch) {
+        setPaymentStatus(`🎉 Pledge successful! Refreshing campaign data...`);
+        setTimeout(() => campaignData.refetch(), 5000); // Longer delay for blockchain confirmation
+      }
       
     } catch (error) {
-      console.error('BasePay failed:', error);
-      setPaymentStatus('❌ BasePay pledge failed');
+      console.error('BasePay pledge failed:', error);
+      setPaymentStatus(`❌ Pledge failed: ${error.message}`);
     }
   };
+
+  // BasePay = Direct pledge to campaign (no faucet!)
+  const handleBasePay = async (campaign) => {
+    if (!isSignedIn) {
+      alert('Please sign in with Base Account first to pledge');
+      return;
+    }
+
+    if (!universalAddress) {
+      alert('Base Account address not found. Please try signing in again.');
+      return;
+    }
+
+    try {
+      const selectedAmount = getAmountForCampaign(campaign.id);
+      const amountInWei = parseUnits(selectedAmount, 6); // USDC has 6 decimals
+      
+      // Force Base Sepolia addresses
+      const USDC_ADDRESS = '0x036CbD53842c5426634e7929541eC2318f3dCF7e';
+      const PLATFORM_ADDRESS = getContractAddress(84532);
+      const provider = sdk.getProvider();
+      
+      setPaymentStatus(`🎯 Pledging ${selectedAmount} USDC to "${campaign.title}" via BasePay...`);
+      
+      // FORCE Base Sepolia network first!
+      try {
+        await provider.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: '0x14a34' }], // Base Sepolia
+        });
+      } catch (switchError) {
+        if (switchError.code === 4902) {
+          await provider.request({
+            method: 'wallet_addEthereumChain',
+            params: [{
+              chainId: '0x14a34',
+              chainName: 'Base Sepolia',
+              nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
+              rpcUrls: ['https://sepolia.base.org'],
+              blockExplorerUrls: ['https://sepolia.basescan.org'],
+            }],
+          });
+        }
+      }
+      
+      await provider.request({ method: 'eth_requestAccounts' });
+      
+      // Check current allowance first
+      setPaymentStatus(`🔍 Checking USDC allowance...`);
+      
+      const allowanceData = encodeFunctionData({
+        abi: [{
+          name: 'allowance',
+          type: 'function', 
+          inputs: [
+            { name: 'owner', type: 'address' },
+            { name: 'spender', type: 'address' }
+          ],
+          outputs: [{ name: '', type: 'uint256' }]
+        }],
+        functionName: 'allowance',
+        args: [universalAddress, PLATFORM_ADDRESS]
+      });
+      
+      const allowanceResult = await provider.request({
+        method: 'eth_call',
+        params: [{
+          to: USDC_ADDRESS,
+          data: allowanceData
+        }, 'latest']
+      });
+      
+      const currentAllowance = BigInt(allowanceResult);
+      console.log('Current allowance:', Number(currentAllowance) / 1000000, 'USDC');
+      
+      // If allowance is insufficient, approve once for a large amount
+      if (currentAllowance < amountInWei) {
+        setPaymentStatus(`🔐 One-time USDC approval needed...`);
+        
+        const largeAmount = parseUnits('1000000', 6); // 1M USDC allowance
+        
+        const approveData = encodeFunctionData({
+          abi: [{
+            name: 'approve',
+            type: 'function',
+            inputs: [
+              { name: 'spender', type: 'address' },
+              { name: 'amount', type: 'uint256' }
+            ],
+            outputs: [{ name: '', type: 'bool' }]
+          }],
+          functionName: 'approve',
+          args: [PLATFORM_ADDRESS, largeAmount]
+        });
+        
+        await provider.request({
+          method: 'eth_sendTransaction',
+          params: [{
+            from: universalAddress,
+            to: USDC_ADDRESS,
+            data: approveData,
+            gas: '0x15f90',
+          }]
+        });
+        
+        setPaymentStatus(`✅ Approved! Now pledging...`);
+        await new Promise(resolve => setTimeout(resolve, 5000));
+      }
+      
+      // Now pledge directly to campaign
+      setPaymentStatus(`🎯 Pledging ${selectedAmount} USDC to "${campaign.title}"...`);
+      
+      const pledgeData = encodeFunctionData({
+        abi: contractAbi,
+        functionName: 'pledge',
+        args: [Number(campaign.id), amountInWei]
+      });
+      
+      const pledgeTx = await provider.request({
+        method: 'eth_sendTransaction',
+        params: [{
+          from: universalAddress,
+          to: PLATFORM_ADDRESS,
+          data: pledgeData,
+          gas: '0x76c0',
+        }]
+      });
+      
+      console.log('✅ Pledge transaction:', pledgeTx);
+      setPaymentStatus(`🎉 Success! ${selectedAmount} USDC pledged to "${campaign.title}"`);
+      
+      // Refresh campaigns
+      if (campaignData.refetch) {
+        setTimeout(() => campaignData.refetch(), 3000);
+      }
+      
+    } catch (error) {
+      console.error('BasePay pledge failed:', error);
+      setPaymentStatus(`❌ Pledge failed: ${error.message}`);
+    }
+  };
+
+
 
   // Hook for writing to contract
   const { writeContractAsync } = useWriteContract();
@@ -829,7 +1155,7 @@ function App() {
                              {/* Payment Methods Info */}
                <div style={styles.card}>
                  <div style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '12px' }}>
-                   💳 How BasePay Works
+                   💳 How Pledging Works
                  </div>
                  <div style={{ marginBottom: '8px' }}>
                    <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#2563eb', marginBottom: '4px' }}>
@@ -841,10 +1167,11 @@ function App() {
                  </div>
                  <div>
                    <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#2563eb', marginBottom: '4px' }}>
-                     2️⃣ Pay with BasePay
+                     2️⃣ Pledge with BasePay
                    </div>
                    <div style={{ fontSize: '11px', opacity: 0.8, lineHeight: '1.4' }}>
-                     Secure payment via Base Account (wallet approval)
+                     Direct USDC pledge to campaign<br/>
+                     (First time: one approval, then instant forever!)
                    </div>
                  </div>
                </div>
@@ -899,7 +1226,7 @@ function App() {
                   <div style={{ marginBottom: '8px' }}>
                     {isSignedIn ? '🟢' : '🔴'} <strong>Base Account:</strong> {isSignedIn ? 'Connected ✅' : 'Not connected'} 
                     <div style={{ fontSize: '11px', opacity: 0.7, marginTop: '2px' }}>
-                      (For everything: BasePay, campaigns, pledges)
+                      (For everything: pledges, campaigns, transactions)
                     </div>
                   </div>
                 </div>
@@ -926,7 +1253,7 @@ function App() {
                     fontSize: '12px',
                     color: dark ? '#93c5fd' : '#3b82f6'
                   }}>
-                    💡 <strong>Start here:</strong> Sign in with Base Account to use all features: BasePay, create campaigns, and make pledges!
+                    💡 <strong>Start here:</strong> Sign in with Base Account to create campaigns and make instant USDC pledges!
                   </div>
                 )}
               </div>
@@ -1136,15 +1463,15 @@ function App() {
                             </div>
                           </div>
                           
-                          {/* BasePay Button with Selected Amount */}
+                          {/* BasePay Pledge */}
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <div style={{ fontSize: '12px', opacity: 0.8 }}>
                               Selected: <span style={{ fontWeight: 'bold', color: '#2563eb' }}>
                                 ${getAmountForCampaign(campaign.id)} USDC
                               </span>
                             </div>
-          <BasePayButton 
-            colorScheme={theme}
+                            <BasePayButton 
+                              colorScheme={theme}
                               onClick={() => handleBasePay(campaign)}
                               style={{
                                 fontSize: '11px',
@@ -1358,10 +1685,10 @@ function App() {
                 />
               </div>
 
-              {/* Goal Amount and Category Row */}
+              {/* Goal Amount, Category, and Duration Row */}
               <div style={{ 
                 display: 'grid', 
-                gridTemplateColumns: '1fr 1fr', 
+                gridTemplateColumns: '1fr 1fr 1fr', 
                 gap: '20px', 
                 marginBottom: '24px'
               }}>
@@ -1445,6 +1772,55 @@ function App() {
                     <option value="Dreams">Dreams</option>
                     <option value="Goals">Goals</option>
                   </select>
+                </div>
+
+                <div>
+                  <label style={{ 
+                    display: 'block', 
+                    marginBottom: '12px', 
+                    fontSize: '16px', 
+                    fontWeight: '600',
+                    color: dark ? '#f1f5f9' : '#1e293b'
+                  }}>
+                    Duration (days) *
+                  </label>
+                  <input
+                    type="number"
+                    value={newCampaign.duration}
+                    onChange={(e) => setNewCampaign(prev => ({ ...prev, duration: e.target.value }))}
+                    placeholder="30"
+                    min="1"
+                    max="365"
+                    style={{
+                      width: '100%',
+                      padding: '16px 20px',
+                      borderRadius: '16px',
+                      border: `2px solid ${dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
+                      backgroundColor: dark ? 'rgba(255,255,255,0.05)' : '#f8fafc',
+                      color: dark ? '#f1f5f9' : '#1e293b',
+                      fontSize: '16px',
+                      fontWeight: '500',
+                      transition: 'all 0.3s ease',
+                      outline: 'none',
+                      boxSizing: 'border-box'
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = '#2563eb';
+                      e.target.style.boxShadow = '0 0 0 4px rgba(37, 99, 235, 0.1)';
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
+                      e.target.style.boxShadow = 'none';
+                    }}
+                  />
+                  <div style={{ 
+                    fontSize: '12px', 
+                    opacity: 0.7, 
+                    marginTop: '6px',
+                    color: dark ? '#94a3b8' : '#64748b'
+                  }}>
+                    Campaign duration (1-365 days)
+                  </div>
                 </div>
               </div>
 
