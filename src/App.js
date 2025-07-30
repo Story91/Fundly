@@ -1005,20 +1005,7 @@ function App() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
           
           {/* Base Account Status */}
-          <div style={{
-            padding: '8px 16px',
-            borderRadius: '20px',
-            border: `1px solid ${dark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)'}`,
-            fontSize: '12px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            background: dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'
-          }}>
-            <div>
-              {isSignedIn ? '🟢' : '🔴'} Base Account: {isSignedIn ? 'Connected' : 'Disconnected'}
-            </div>
-          </div>
+
           <button
             style={{
               padding: '8px 16px',
@@ -1179,8 +1166,39 @@ function App() {
                     🚪 Logout
                   </button>
                 </div>
-                <div style={{ fontSize: '12px', opacity: 0.8, marginBottom: '10px' }}>
-                  {universalAddress.slice(0, 6)}...{universalAddress.slice(-4)}
+                <div style={{ fontSize: '11px', fontWeight: 'bold', marginBottom: '8px', opacity: 0.9 }}>
+                  BaseAccount Address:
+                </div>
+                <div 
+                  onClick={() => {
+                    navigator.clipboard.writeText(universalAddress);
+                    setPaymentStatus('📋 Address copied to clipboard!');
+                    setTimeout(() => setPaymentStatus(''), 2000);
+                  }}
+                  style={{ 
+                    fontSize: '10px', 
+                    opacity: 0.8, 
+                    marginBottom: '10px',
+                    padding: '8px',
+                    backgroundColor: dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    wordBreak: 'break-all',
+                    lineHeight: '1.3',
+                    border: `1px dashed ${dark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)'}`,
+                    transition: 'all 0.2s ease'
+                  }}
+                  onMouseOver={(e) => {
+                    e.target.style.backgroundColor = dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
+                    e.target.style.borderStyle = 'solid';
+                  }}
+                  onMouseOut={(e) => {
+                    e.target.style.backgroundColor = dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
+                    e.target.style.borderStyle = 'dashed';
+                  }}
+                  title="Click to copy address"
+                >
+                  📋 {universalAddress}
                 </div>
                 <div style={{ fontSize: '12px', color: '#28a745' }}>
                   ✅ Connected
@@ -1578,6 +1596,68 @@ function App() {
               <div>🎯 Campaigns: 1,234</div>
               <div>👥 Active Users: 45,678</div>
               <div>✅ Success Rate: 78%</div>
+            </div>
+          </div>
+
+          <div style={{ ...styles.card, marginTop: '20px' }}>
+            <h4 style={{ marginTop: 0, fontSize: '16px' }}>🔒 Smart Contract</h4>
+            <div style={{ fontSize: '12px', lineHeight: '1.6', marginBottom: '12px' }}>
+              <div style={{ marginBottom: '8px' }}>
+                <span style={{ color: '#22c55e', fontWeight: 'bold' }}>✅ Verified Contract</span>
+              </div>
+              <div style={{ marginBottom: '4px' }}>
+                📜 <strong>CrowdfundingEscrow</strong>
+              </div>
+              <div style={{ marginBottom: '4px' }}>
+                🌐 <strong>Base Mainnet</strong>
+              </div>
+              <div style={{ marginBottom: '8px' }}>
+                🔗 <strong>BaseScan Verified</strong>
+              </div>
+            </div>
+            <div 
+              onClick={() => {
+                navigator.clipboard.writeText('0xef0B17afD2089Cc34b68F48B892922b113FedcE2');
+                setPaymentStatus('📋 Contract address copied!');
+                setTimeout(() => setPaymentStatus(''), 2000);
+              }}
+              style={{ 
+                fontSize: '10px', 
+                opacity: 0.8,
+                padding: '8px',
+                backgroundColor: dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                wordBreak: 'break-all',
+                lineHeight: '1.3',
+                border: `1px dashed ${dark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)'}`,
+                transition: 'all 0.2s ease'
+              }}
+              onMouseOver={(e) => {
+                e.target.style.backgroundColor = dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
+                e.target.style.borderStyle = 'solid';
+              }}
+              onMouseOut={(e) => {
+                e.target.style.backgroundColor = dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
+                e.target.style.borderStyle = 'dashed';
+              }}
+              title="Click to copy contract address"
+            >
+              📋 0xef0B17afD2089Cc34b68F48B892922b113FedcE2
+            </div>
+            <div style={{ fontSize: '10px', opacity: 0.7, marginTop: '6px', textAlign: 'center' }}>
+              <a 
+                href="https://basescan.org/address/0xef0B17afD2089Cc34b68F48B892922b113FedcE2#code"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ 
+                  color: '#2563eb', 
+                  textDecoration: 'none',
+                  fontSize: '10px'
+                }}
+              >
+                🔍 View on BaseScan
+              </a>
             </div>
           </div>
         </div>
