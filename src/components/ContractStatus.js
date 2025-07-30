@@ -19,19 +19,19 @@ const ContractStatus = ({ styles }) => {
   return (
     <div style={{
       ...styles.card,
-      backgroundColor: chainId === 84532 ? 'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.2)',
+      backgroundColor: chainId === 8453 ? 'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.2)',
       marginBottom: '16px'
     }}>
       <div style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '8px' }}>
         🏗️ Contract Status
       </div>
       <div style={{ fontSize: '12px', marginBottom: '8px' }}>
-        Network: {chainId === 84532 ? 'Base Sepolia ✅' : `Chain ${chainId} ❌`}
+        Network: {chainId === 8453 ? 'Base Mainnet ✅' : `Chain ${chainId} ❌`}
       </div>
       <div style={{ fontSize: '12px', marginBottom: '8px' }}>
         Campaigns: {`${Number(totalCampaigns || 0)} total`}
       </div>
-      {chainId === 84532 && (
+      {chainId === 8453 && (
         <div style={{ fontSize: '11px', opacity: 0.8, fontFamily: 'monospace' }}>
           {getContractAddress(chainId).slice(0, 8)}...{getContractAddress(chainId).slice(-6)}
         </div>

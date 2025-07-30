@@ -72,13 +72,13 @@ function App() {
   // Unsplash API configuration
   const UNSPLASH_ACCESS_KEY = 'uGdVJxeg4lsYvDtmfAiTdQtpkkoet2TUVZyz5llER6E';
 
-  // Initialize SDK with Base Sepolia network
+  // Initialize SDK with Base Mainnet network
   const sdk = createBaseAccountSDK({
     appName: 'Fundly - Crowdfunding Platform',
     appLogo: 'https://base.org/logo.png',
     chain: {
-      id: 84532, // Base Sepolia
-      name: 'Base Sepolia',
+      id: 8453, // Base Mainnet
+              name: 'Base Mainnet',
       network: 'base-sepolia',
       nativeCurrency: {
         decimals: 18,
@@ -86,12 +86,12 @@ function App() {
         symbol: 'ETH',
       },
       rpcUrls: {
-        public: { http: ['https://sepolia.base.org'] },
-        default: { http: ['https://sepolia.base.org'] },
+        public: { http: ['https://mainnet.base.org'] },
+        default: { http: ['https://mainnet.base.org'] },
       },
       blockExplorers: {
-        etherscan: { name: 'BaseScan', url: 'https://sepolia.basescan.org' },
-        default: { name: 'BaseScan', url: 'https://sepolia.basescan.org' },
+        etherscan: { name: 'BaseScan', url: 'https://basescan.org' },
+        default: { name: 'BaseScan', url: 'https://basescan.org' },
       },
     },
   });
@@ -238,10 +238,13 @@ function App() {
   console.log('campaignData.campaigns:', campaignData.campaigns);
   console.log('campaignData.campaigns.length:', campaignData.campaigns?.length);
   
-  const campaigns = !campaignData.loading && campaignData.campaigns.length > 0 ? campaignData.campaigns : mockCampaigns;
+  // TEMPORARILY FORCE REAL DATA ONLY - no mock campaigns
+  const campaigns = campaignData.campaigns;
   
-  console.log('✅ Using campaigns:', campaigns.length > 3 ? 'MOCK DATA' : 'REAL DATA or EMPTY');
-  console.log('campaigns count:', campaigns.length);
+  console.log('✅ FORCED REAL DATA ONLY');
+  console.log('Real campaigns count:', campaigns.length);
+  console.log('campaignData.loading:', campaignData.loading);
+  console.log('campaignData.campaigns:', campaignData.campaigns);
 
   // Filter campaigns based on status
   const getFilteredCampaigns = () => {
@@ -367,9 +370,9 @@ function App() {
       const selectedAmount = getAmountForCampaign(campaign.id);
       const amountInWei = parseUnits(selectedAmount, 6); // USDC has 6 decimals
       
-      // USDC token address on Base Sepolia
-      const USDC_ADDRESS = '0x036CbD53842c5426634e7929541eC2318f3dCF7e';
-      const PLATFORM_ADDRESS = getContractAddress(84532);
+      // USDC token address on Base Mainnet
+      const USDC_ADDRESS = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
+      const PLATFORM_ADDRESS = getContractAddress(8453);
       const provider = sdk.getProvider(); // Define provider once at the top
       
       setPaymentStatus(`💰 Step 1/3: Getting ${selectedAmount} USDC via BasePay for campaign "${campaign.title}"...`);
@@ -435,14 +438,14 @@ function App() {
       console.log('🔐 Requesting accounts for approve transaction...');
       await provider.request({ method: 'eth_requestAccounts' });
       
-      // Switch to Base Sepolia if needed
+      // Switch to Base Mainnet if needed
       try {
         await provider.request({
           method: 'wallet_switchEthereumChain',
-          params: [{ chainId: '0x14a34' }], // Base Sepolia chainId in hex
+          params: [{ chainId: '0x2105' }], // Base Mainnet chainId in hex
         });
       } catch (switchError) {
-        console.log('Network switch error (might be already on Base Sepolia):', switchError);
+        console.log('Network switch error (might be already on Base Mainnet):', switchError);
       }
       
       // USDC approve transaction using proper encoding
@@ -586,29 +589,29 @@ function App() {
       const selectedAmount = getAmountForCampaign(campaign.id);
       const amountInWei = parseUnits(selectedAmount, 6); // USDC has 6 decimals
       
-      // Force Base Sepolia addresses
-      const USDC_ADDRESS = '0x036CbD53842c5426634e7929541eC2318f3dCF7e';
-      const PLATFORM_ADDRESS = getContractAddress(84532);
+      // Base Mainnet addresses
+      const USDC_ADDRESS = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
+      const PLATFORM_ADDRESS = getContractAddress(8453);
       const provider = sdk.getProvider();
       
       setPaymentStatus(`🎯 Pledging ${selectedAmount} USDC to "${campaign.title}" via BasePay...`);
       
-      // FORCE Base Sepolia network first!
+      // FORCE Base Mainnet network first!
       try {
         await provider.request({
           method: 'wallet_switchEthereumChain',
-          params: [{ chainId: '0x14a34' }], // Base Sepolia
+          params: [{ chainId: '0x2105' }], // Base Mainnet
         });
       } catch (switchError) {
         if (switchError.code === 4902) {
           await provider.request({
             method: 'wallet_addEthereumChain',
             params: [{
-              chainId: '0x14a34',
-              chainName: 'Base Sepolia',
+              chainId: '0x2105',
+              chainName: 'Base Mainnet',
               nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
-              rpcUrls: ['https://sepolia.base.org'],
-              blockExplorerUrls: ['https://sepolia.basescan.org'],
+              rpcUrls: ['https://mainnet.base.org'],
+              blockExplorerUrls: ['https://basescan.org'],
             }],
           });
         }
@@ -736,12 +739,12 @@ function App() {
 
       // Call the real contract pledge function using Base Account!
       await writeContractAsync({
-        address: getContractAddress(84532), // Base Sepolia
+        address: getContractAddress(8453), // Base Mainnet
         abi: contractAbi,
         functionName: 'pledge',
         args: [Number(campaign.id), amountInWei],
         account: universalAddress, // Use Base Account address
-        chain: { id: 84532 }, // Force Base Sepolia
+        chain: { id: 8453 }, // Force Base Mainnet
       });
 
       setPaymentStatus('✅ Pledge successful!');

@@ -13,19 +13,19 @@ const UserDashboard = ({ styles, dark, isSignedIn, universalAddress }) => {
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState(null); // Track which action is loading
 
-  // Force Base Sepolia for consistency with main app
-  const targetChainId = 84532; // Base Sepolia
+  // Force Base Mainnet for consistency with main app
+  const targetChainId = 8453; // Base Mainnet
   
   // Initialize SDK for contract interactions
   const sdk = createBaseAccountSDK({
     appName: 'Fundly - Crowdfunding Platform',
     chain: {
-      id: 84532,
-      name: 'Base Sepolia',
-      network: 'base-sepolia',
+      id: 8453,
+      name: 'Base Mainnet',
+      network: 'base',
       nativeCurrency: { decimals: 18, name: 'Ether', symbol: 'ETH' },
-      rpcUrls: { default: { http: ['https://sepolia.base.org'] } },
-      blockExplorers: { default: { name: 'BaseScan', url: 'https://sepolia.basescan.org' } },
+      rpcUrls: { default: { http: ['https://mainnet.base.org'] } },
+      blockExplorers: { default: { name: 'BaseScan', url: 'https://basescan.org' } },
     },
   });
   
@@ -117,7 +117,7 @@ const UserDashboard = ({ styles, dark, isSignedIn, universalAddress }) => {
           abi: contractAbi,
           functionName: 'getCampaign',
           args: [campaignId],
-          chainId: targetChainId, // Force Base Sepolia
+          chainId: targetChainId, // Force Base Mainnet
         });
 
         // Convert contract data to frontend format

@@ -3,7 +3,7 @@ export const CONTRACT_CONFIG = {
   // Adresy kontraktu na różnych sieciach
   addresses: {
     baseSepolia: "0xdEEd47D0b073B1dEF70813FFA1D6E9ac1Df0E3EF",
-    base: "", // Do uzupełnienia po deploymencie na mainnet
+    base: "0xef0B17afD2089Cc34b68F48B892922b113FedcE2", // Base mainnet deployment
   },
   
   // Adresy USDC na różnych sieciach

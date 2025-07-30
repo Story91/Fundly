@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { createBaseAccountSDK } from '@base-org/account';
 import { parseUnits, encodeFunctionData, createPublicClient, http } from 'viem';
-import { baseSepolia } from 'viem/chains';
+import { base } from 'viem/chains';
 import { put } from '@vercel/blob';
 import { CONTRACT_CONFIG, getContractAddress } from '../contracts/contract-config';
 import contractAbi from '../contracts/CrowdfundingPlatform.abi.json';
@@ -20,13 +20,13 @@ const CreateCampaignButton = ({
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [uploadedImageUrl, setUploadedImageUrl] = useState(null);
 
-  // Initialize SDK with Base Sepolia network
+  // Initialize SDK with Base Mainnet network
   const sdk = createBaseAccountSDK({
     appName: 'Fundly - Crowdfunding Platform',
     appLogo: 'https://base.org/logo.png',
     chain: {
-      id: 84532, // Base Sepolia
-      name: 'Base Sepolia',
+      id: 8453, // Base Mainnet
+      name: 'Base Mainnet',
       network: 'base-sepolia',
       nativeCurrency: {
         decimals: 18,
@@ -34,12 +34,12 @@ const CreateCampaignButton = ({
         symbol: 'ETH',
       },
       rpcUrls: {
-        public: { http: ['https://sepolia.base.org'] },
-        default: { http: ['https://sepolia.base.org'] },
+              public: { http: ['https://mainnet.base.org'] },
+      default: { http: ['https://mainnet.base.org'] },
       },
       blockExplorers: {
-        etherscan: { name: 'BaseScan', url: 'https://sepolia.basescan.org' },
-        default: { name: 'BaseScan', url: 'https://sepolia.basescan.org' },
+        etherscan: { name: 'BaseScan', url: 'https://basescan.org' },
+        default: { name: 'BaseScan', url: 'https://basescan.org' },
       },
     },
   });
@@ -116,8 +116,8 @@ const CreateCampaignButton = ({
       return;
     }
 
-    // We'll use Base Sepolia (chainId 84532) as default for Base Account users
-    const targetChainId = 84532;
+    // We'll use Base Mainnet (chainId 8453) as default for Base Account users
+    const targetChainId = 8453;
 
     try {
       // 1. Upload image to Vercel Blob first (if provided)
@@ -141,10 +141,10 @@ const CreateCampaignButton = ({
 
       setIsCreating(true);
 
-      // Use viem to create a public client for Base Sepolia
+      // Use viem to create a public client for Base Mainnet
       const publicClient = createPublicClient({
-        chain: baseSepolia,
-        transport: http('https://sepolia.base.org')
+            chain: base,
+    transport: http('https://mainnet.base.org')
       });
 
       // Get the provider from Base Account SDK
@@ -165,9 +165,9 @@ const CreateCampaignButton = ({
       console.log('Contract address:', getContractAddress(targetChainId));
       console.log('Args:', [newCampaign.title, newCampaign.description, goalInWei.toString(), durationInSeconds]);
       
-      setPaymentStatus('🌐 Switching to Base Sepolia network...');
+      setPaymentStatus('🌐 Switching to Base Mainnet network...');
       
-      // First switch to Base Sepolia network
+      // First switch to Base Mainnet network
       try {
         await provider.request({
           method: 'wallet_switchEthereumChain',
@@ -181,14 +181,14 @@ const CreateCampaignButton = ({
             method: 'wallet_addEthereumChain',
             params: [{
               chainId: `0x${targetChainId.toString(16)}`,
-              chainName: 'Base Sepolia',
+              chainName: 'Base Mainnet',
               nativeCurrency: {
                 name: 'Ether',
                 symbol: 'ETH',
                 decimals: 18,
               },
-              rpcUrls: ['https://sepolia.base.org'],
-              blockExplorerUrls: ['https://sepolia.basescan.org'],
+              rpcUrls: ['https://mainnet.base.org'],
+              blockExplorerUrls: ['https://basescan.org'],
             }],
           });
         }
