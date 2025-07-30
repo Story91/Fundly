@@ -308,15 +308,12 @@ function App() {
     }
   ];
 
-  // Show different campaigns based on login status
-  const campaigns = isSignedIn 
-    ? [...campaignData.campaigns, ...demoCampaigns] // Real + all demo when logged in
-    : demoCampaigns; // Only demo campaigns when not logged in
-    
-  // FIXED: Don't fallback to demo only when loading - show demo + real (or just demo while loading)
+  // Show ALL campaigns to EVERYONE - real campaigns should be visible to all users!
+  // Only login status affects ability to CREATE campaigns and PLEDGE, not VIEWING
+  const campaigns = [...campaignData.campaigns, ...demoCampaigns]; // Always show all campaigns
   const finalCampaigns = campaigns;
   
-  console.log('✅ CAMPAIGN DISPLAY LOGIC');
+  console.log('✅ CAMPAIGN DISPLAY LOGIC - SHOWING ALL CAMPAIGNS TO EVERYONE');
   console.log('User logged in:', isSignedIn);
   console.log('Real campaigns available:', campaignData.campaigns.length);
   console.log('Campaign data loading:', campaignData.loading);
@@ -324,17 +321,13 @@ function App() {
   console.log('Demo campaigns count:', demoCampaigns.length);
   console.log('campaigns (merged):', campaigns.length);
   console.log('finalCampaigns:', finalCampaigns.length);
-  if (isSignedIn) {
-    console.log('Logged in mode: Real + demo campaigns');
-    if (campaignData.campaigns.length === 0) {
-      console.log('⚠️ No real campaigns found yet - showing demo');
-    } else {
-      console.log('✅ Real campaigns found:', campaignData.campaigns.map(c => ({ id: c.id, title: c.title, raised: c.raised, backers: c.backers })));
-    }
+  console.log('📺 All users see: Real blockchain campaigns + demo campaigns');
+  if (campaignData.campaigns.length === 0) {
+    console.log('⚠️ No real campaigns found yet - but showing demo for all users');
   } else {
-    console.log('Guest mode: Demo campaigns only');
+    console.log('✅ Real campaigns found:', campaignData.campaigns.map(c => ({ id: c.id, title: c.title, raised: c.raised, backers: c.backers })));
   }
-  console.log('FINAL campaigns that will be displayed:', finalCampaigns.map(c => ({ id: c.id, title: c.title, isDemo: c.isDemo || false })));
+  console.log('FINAL campaigns that will be displayed to ALL users:', finalCampaigns.map(c => ({ id: c.id, title: c.title, isDemo: c.isDemo || false })));
 
   // Filter campaigns based on status
   const getFilteredCampaigns = () => {
@@ -1428,7 +1421,7 @@ function App() {
             </div>
           )}
 
-          {/* Demo Banner for non-logged users */}
+          {/* Info Banner for all users about campaign types */}
           {!isSignedIn && (
             <div style={{
               ...styles.card,
@@ -1436,29 +1429,29 @@ function App() {
               textAlign: 'center',
               marginBottom: '20px',
               background: dark 
-                ? 'linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(147, 51, 234, 0.1))'
-                : 'linear-gradient(135deg, rgba(59, 130, 246, 0.05), rgba(147, 51, 234, 0.05))',
-              border: `1px solid ${dark ? 'rgba(59, 130, 246, 0.3)' : 'rgba(59, 130, 246, 0.2)'}`,
+                ? 'linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(16, 185, 129, 0.1))'
+                : 'linear-gradient(135deg, rgba(34, 197, 94, 0.05), rgba(16, 185, 129, 0.05))',
+              border: `1px solid ${dark ? 'rgba(34, 197, 94, 0.3)' : 'rgba(34, 197, 94, 0.2)'}`,
               borderRadius: '16px'
             }}>
               <div style={{ fontSize: '16px', marginBottom: '12px' }}>
-                🎭 <strong>Demo Campaigns</strong>
+                🚀 <strong>Live Campaigns</strong>
               </div>
               <div style={{ fontSize: '14px', marginBottom: '16px', opacity: 0.8, lineHeight: '1.5' }}>
-                These are example campaigns to showcase our platform. 
+                You're viewing <strong>real campaigns from Base blockchain</strong> + demo examples. 
                 <br />
-                <strong>Sign in with Base Account</strong> to see real campaigns and create your own!
+                <strong>Sign in with Base Account</strong> to create campaigns and make pledges!
               </div>
               <div style={{ fontSize: '12px', opacity: 0.7 }}>
-                🚫 BasePay is disabled for demo campaigns
+                💰 BasePay pledging requires login
               </div>
             </div>
           )}
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%', maxWidth: '900px' }}>
             
-            {/* Loading indicator for real campaigns */}
-            {isSignedIn && campaignData.loading && (
+            {/* Loading indicator for real campaigns - shown to all users */}
+            {campaignData.loading && (
               <div style={{
                 ...styles.card,
                 textAlign: 'center',
@@ -1478,7 +1471,7 @@ function App() {
                   marginBottom: '8px', 
                   color: '#2563eb' 
                 }}>
-                  Loading Real Campaigns from Base Mainnet...
+                  Loading Live Campaigns from Base Blockchain...
                 </div>
                 <div style={{ 
                   fontSize: '14px', 
@@ -1491,7 +1484,7 @@ function App() {
                     // Phase 1: Initial loading
                     <>
                       🚀 <strong>Phase 1:</strong> Fast campaign fetch<br/>
-                      🔍 Getting campaign data from Base Mainnet<br/>
+                      🔍 Getting live campaigns from Base Mainnet<br/>
                       <em>Usually takes ~500ms...</em>
                     </>
                   ) : (
@@ -1697,8 +1690,8 @@ function App() {
               </div>
             ))}
             
-            {/* Info banner for logged users about demo campaigns */}
-            {isSignedIn && finalCampaigns.some(c => c.isDemo) && (
+            {/* Info banner about demo campaigns for all users */}
+            {finalCampaigns.some(c => c.isDemo) && (
               <div style={{
                 ...styles.card,
                 padding: '12px 16px',
@@ -1709,7 +1702,7 @@ function App() {
                 borderRadius: '8px'
               }}>
                 <div style={{ fontSize: '11px', opacity: 0.7 }}>
-                  🎭 Demo campaigns shown above for platform showcase
+                  🎭 Some demo campaigns included above for platform showcase alongside real blockchain campaigns
                 </div>
               </div>
             )}
