@@ -238,13 +238,45 @@ function App() {
   console.log('campaignData.campaigns:', campaignData.campaigns);
   console.log('campaignData.campaigns.length:', campaignData.campaigns?.length);
   
-  // TEMPORARILY FORCE REAL DATA ONLY - no mock campaigns
-  const campaigns = campaignData.campaigns;
+  // Show real campaigns first, then add demo campaigns
+  const demoCampaigns = [
+    {
+      id: 'demo-1',
+      title: "Clean Water for Rural Communities",
+      description: "Help us build water wells in underserved communities across East Africa.",
+      image: "https://images.unsplash.com/photo-1541919329513-35f7af297129?w=400&h=300&fit=crop",
+      creator: "WaterHope Foundation",
+      raised: 12450,
+      goal: 50000,
+      backers: 89,
+      daysLeft: 23,
+      category: "Environment",
+      status: "Active",
+      isDemo: true // Mark as demo campaign
+    },
+    {
+      id: 'demo-2',
+      title: "Revolutionary Solar Panel Technology",
+      description: "Next-generation solar panels with 40% higher efficiency than current models.",
+      image: "https://images.unsplash.com/photo-1509391366360-2e959784a276?w=400&h=300&fit=crop",
+      creator: "SolarTech Innovation",
+      raised: 75300,
+      goal: 100000,
+      backers: 234,
+      daysLeft: 15,
+      category: "Technology",
+      status: "Active",
+      isDemo: true // Mark as demo campaign
+    }
+  ];
+
+  // Combine real campaigns with demo campaigns
+  const campaigns = [...campaignData.campaigns, ...demoCampaigns];
   
-  console.log('✅ FORCED REAL DATA ONLY');
-  console.log('Real campaigns count:', campaigns.length);
-  console.log('campaignData.loading:', campaignData.loading);
-  console.log('campaignData.campaigns:', campaignData.campaigns);
+  console.log('✅ REAL + DEMO CAMPAIGNS');
+  console.log('Real campaigns count:', campaignData.campaigns.length);
+  console.log('Demo campaigns count:', demoCampaigns.length);
+  console.log('Total campaigns:', campaigns.length);
 
   // Filter campaigns based on status
   const getFilteredCampaigns = () => {
@@ -1466,23 +1498,39 @@ function App() {
                             </div>
                           </div>
                           
-                          {/* BasePay Pledge */}
+                          {/* BasePay Pledge or Demo Notice */}
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <div style={{ fontSize: '12px', opacity: 0.8 }}>
                               Selected: <span style={{ fontWeight: 'bold', color: '#2563eb' }}>
                                 ${getAmountForCampaign(campaign.id)} USDC
                               </span>
                             </div>
-                            <BasePayButton 
-                              colorScheme={theme}
-                              onClick={() => handleBasePay(campaign)}
-                              style={{
+                            
+                            {campaign.isDemo ? (
+                              <div style={{
                                 fontSize: '11px',
                                 padding: '8px 16px',
-                                transform: 'scale(0.9)',
-                                borderRadius: '10px'
-                              }}
-                            />
+                                backgroundColor: '#6b7280',
+                                color: 'white',
+                                borderRadius: '10px',
+                                fontWeight: 'bold',
+                                opacity: 0.7,
+                                cursor: 'not-allowed'
+                              }}>
+                                🎭 Demo Campaign
+                              </div>
+                            ) : (
+                              <BasePayButton 
+                                colorScheme={theme}
+                                onClick={() => handleBasePay(campaign)}
+                                style={{
+                                  fontSize: '11px',
+                                  padding: '8px 16px',
+                                  transform: 'scale(0.9)',
+                                  borderRadius: '10px'
+                                }}
+                              />
+                            )}
                           </div>
                         </>
                       )}
