@@ -1,12 +1,36 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { createBaseAccountSDK, pay, getPaymentStatus } from '@base-org/account';
 import { SignInWithBaseButton, BasePayButton } from '@base-org/account-ui/react';
 
+// Wagmi imports for real contract integration
+import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
+import { parseUnits, formatUnits } from 'viem';
+import { CONTRACT_CONFIG, getContractAddress } from './contracts/contract-config';
+import contractAbi from './contracts/CrowdfundingPlatform.abi.json';
+
+// Import our modular components
+import ContractStatus from './components/ContractStatus';
+import CampaignManager from './components/CampaignManager';
+import CreateCampaignButton from './components/CreateCampaignButton';
+import UserDashboard from './components/UserDashboard';
+import ImageUploadField from './components/ImageUploadField';
+import CampaignListSupabase from './components/CampaignListSupabase';
+
 function App() {
+  // Wagmi hooks for contract integration
+  const { address: walletAddress, isConnected: isWalletConnected, chainId } = useAccount();
+  
   const [isSignedIn, setIsSignedIn] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState('');
   const [paymentId, setPaymentId] = useState('');
   const [theme, setTheme] = useState('light');
+  
+  // Real contract data - managed by CampaignManager component
+  const [campaignData, setCampaignData] = useState({
+    campaigns: [],
+    loading: true,
+    refetch: null
+  });
 
   // Sub Account states
   const [subAccount, setSubAccount] = useState(null);
@@ -47,14 +71,44 @@ function App() {
   // Unsplash API configuration
   const UNSPLASH_ACCESS_KEY = 'uGdVJxeg4lsYvDtmfAiTdQtpkkoet2TUVZyz5llER6E';
 
-  // Initialize SDK
+  // Initialize SDK with Base Sepolia network
   const sdk = createBaseAccountSDK({
     appName: 'Fundly - Crowdfunding Platform',
-      appLogo: 'https://base.org/logo.png',
+    appLogo: 'https://base.org/logo.png',
+    chain: {
+      id: 84532, // Base Sepolia
+      name: 'Base Sepolia',
+      network: 'base-sepolia',
+      nativeCurrency: {
+        decimals: 18,
+        name: 'Ether',
+        symbol: 'ETH',
+      },
+      rpcUrls: {
+        public: { http: ['https://sepolia.base.org'] },
+        default: { http: ['https://sepolia.base.org'] },
+      },
+      blockExplorers: {
+        etherscan: { name: 'BaseScan', url: 'https://sepolia.basescan.org' },
+        default: { name: 'BaseScan', url: 'https://sepolia.basescan.org' },
+      },
+    },
   });
 
-  // Mock crowdfunding campaigns data
-  const campaigns = [
+  // Campaign data management is now handled by CampaignManager component
+  const handleCampaignsUpdate = (data) => {
+    setCampaignData(data);
+  };
+
+  const handleCampaignCreated = () => {
+    // Refresh campaigns when a new one is created
+    if (campaignData.refetch) {
+      campaignData.refetch();
+    }
+  };
+
+  // Use real campaigns if available, otherwise fall back to mock data
+  const mockCampaigns = [
     {
       id: 1,
       title: "Clean Water for Rural Communities",
@@ -145,11 +199,8 @@ function App() {
       daysLeft: 0,
       category: "Culture",
       status: "Completed - Unfunded"
-    }
-  ];
-
-  // Add some Dreams and Goals campaigns
-  campaigns.push(
+    },
+    // Dreams and Goals campaigns
     {
       id: 8,
       title: "Follow My Dream: Becoming a Professional Chef",
@@ -176,7 +227,10 @@ function App() {
       creator: "Alex Thompson",
       status: "Nearly Funded"
     }
-  );
+  ];
+
+  // Use real campaigns if we have them and not loading, otherwise use mock data
+  const campaigns = !campaignData.loading && campaignData.campaigns.length > 0 ? campaignData.campaigns : mockCampaigns;
 
   // Filter campaigns based on status
   const getFilteredCampaigns = () => {
@@ -286,23 +340,80 @@ function App() {
     return selectedAmounts[campaignId] || '1';
   };
 
-  // BasePay function with selected amount (ONLY BasePay, no SubAccount)
+  // BasePay function - NOW INTEGRATED WITH REAL CONTRACT!
   const handleBasePay = async (campaign) => {
+    if (!isSignedIn) {
+      alert('Please sign in with Base Account first to use BasePay');
+      return;
+    }
+
+    if (!universalAddress) {
+      alert('Base Account address not found. Please try signing in again.');
+      return;
+    }
+
     try {
       const selectedAmount = getAmountForCampaign(campaign.id);
-      setPaymentStatus(`Processing ${selectedAmount} USDC donation via BasePay...`);
+      setPaymentStatus(`Processing ${selectedAmount} USDC pledge via BasePay...`);
       
+      // First, use BasePay to get USDC to the user's Base Account wallet
       const { id } = await pay({
         amount: selectedAmount, // Use selected amount (1, 5, 10, or 100)
-        to: '0xF1fa20027b6202bc18e4454149C85CB01dC91Dfd', // Campaign escrow address
+        to: universalAddress, // Send to Base Account address
         testnet: true
       });
 
       setPaymentId(id);
-      setPaymentStatus(`✅ BasePay successful! ${selectedAmount} USDC donated to "${campaign.title}"`);
+      setPaymentStatus(`✅ BasePay successful! Now you can pledge ${selectedAmount} USDC to "${campaign.title}". Please approve the transaction to complete your pledge.`);
+      
+      // Note: For real pledging, user would need to:
+      // 1. Approve USDC spending
+      // 2. Call pledge() function on contract
+      // This requires a 2-step process which we could implement with additional UI
+      
     } catch (error) {
       console.error('BasePay failed:', error);
-      setPaymentStatus('❌ BasePay donation failed');
+      setPaymentStatus('❌ BasePay pledge failed');
+    }
+  };
+
+  // Hook for writing to contract
+  const { writeContractAsync } = useWriteContract();
+
+  // Alternative: Direct contract pledge (works with Base Account!)
+  const handleDirectPledge = async (campaign) => {
+    if (!isSignedIn) {
+      alert('Please sign in with Base Account first to make a pledge');
+      return;
+    }
+
+    if (!universalAddress) {
+      alert('Base Account address not found. Please try signing in again.');
+      return;
+    }
+
+    try {
+      const selectedAmount = getAmountForCampaign(campaign.id);
+      const amountInWei = parseUnits(selectedAmount, 6); // USDC has 6 decimals
+      
+      setPaymentStatus(`Processing ${selectedAmount} USDC pledge to blockchain...`);
+
+      // Call the real contract pledge function using Base Account!
+      await writeContractAsync({
+        address: getContractAddress(84532), // Base Sepolia
+        abi: contractAbi,
+        functionName: 'pledge',
+        args: [Number(campaign.id), amountInWei],
+        account: universalAddress, // Use Base Account address
+        chain: { id: 84532 }, // Force Base Sepolia
+      });
+
+      setPaymentStatus('✅ Pledge successful!');
+
+    } catch (error) {
+      console.error('Direct pledge failed:', error);
+      alert('Pledge failed: ' + error.message);
+      setPaymentStatus('❌ Direct pledge failed');
     }
   };
 
@@ -339,23 +450,7 @@ function App() {
     alert('Need help? Contact us at hello@fundly.com or check our documentation! 📚');
   };
 
-  // Handle Create Campaign form submission
-  const handleCreateCampaignSubmit = () => {
-    if (!newCampaign.title || !newCampaign.description || !newCampaign.goal || !newCampaign.creatorNickname) {
-      alert('Please fill in all required fields (Title, Description, Goal, and Creator Nickname)');
-      return;
-    }
-
-    if (!newCampaign.image) {
-      alert('Please select an image for your campaign');
-      return;
-    }
-
-    // Demo success message
-    alert('Campaign created successfully! 🎉 (This is a demo - real implementation would save to database)');
-    setShowCreateModal(false);
-    setNewCampaign({ title: '', description: '', goal: '', category: 'Technology', image: '', creatorNickname: '' });
-  };
+  // Campaign creation logic moved to CreateCampaignButton component
 
   // Handle About donation (Buy us coffee)
   const handleAboutDonation = async () => {
@@ -537,6 +632,22 @@ function App() {
         
         {/* Navigation buttons */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          
+          {/* Base Account Status */}
+          <div style={{
+            padding: '8px 16px',
+            borderRadius: '20px',
+            border: `1px solid ${dark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)'}`,
+            fontSize: '12px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            background: dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'
+          }}>
+            <div>
+              {isSignedIn ? '🟢' : '🔴'} Base Account: {isSignedIn ? 'Connected' : 'Disconnected'}
+            </div>
+          </div>
           <button
             style={{
               padding: '8px 16px',
@@ -649,11 +760,53 @@ function App() {
             💼 Wallet Manager
           </h3>
           
+          {/* Contract Connection Status - Now using ContractStatus component */}
+          <ContractStatus styles={styles} />
+          
+          {/* User's Campaign Dashboard */}
+          <UserDashboard 
+            styles={styles} 
+            dark={dark} 
+            isSignedIn={isSignedIn}
+            universalAddress={universalAddress}
+          />
+          
           {isSignedIn ? (
             <div>
       <div style={styles.card}>
-                <div style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '8px' }}>
-                  🏦 Main Account
+                <div style={{ 
+                  display: 'flex', 
+                  justifyContent: 'space-between', 
+                  alignItems: 'center',
+                  marginBottom: '8px' 
+                }}>
+                  <div style={{ fontSize: '14px', fontWeight: 'bold' }}>
+                    🏦 Main Account
+                  </div>
+                  <button
+                    onClick={() => {
+                      setIsSignedIn(false);
+                      setUniversalAddress('');
+                      setSubAccount(null);
+                      setHasSubAccount(false);
+                      setPaymentStatus('👋 Logged out successfully');
+                    }}
+                    style={{
+                      padding: '4px 8px',
+                      borderRadius: '6px',
+                      border: 'none',
+                      background: '#ef4444',
+                      color: 'white',
+                      fontSize: '11px',
+                      fontWeight: 'bold',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease'
+                    }}
+                    onMouseOver={(e) => e.target.style.background = '#dc2626'}
+                    onMouseOut={(e) => e.target.style.background = '#ef4444'}
+                  >
+                    🚪 Logout
+                  </button>
                 </div>
                 <div style={{ fontSize: '12px', opacity: 0.8, marginBottom: '10px' }}>
                   {universalAddress.slice(0, 6)}...{universalAddress.slice(-4)}
@@ -721,16 +874,51 @@ function App() {
             <div style={styles.card}>
               <div style={{ textAlign: 'center', padding: '20px 0' }}>
                 <div style={{ fontSize: '48px', marginBottom: '16px' }}>🔐</div>
-                <div style={{ fontSize: '14px', marginBottom: '16px' }}>
-                  Connect your wallet to start donating
+                <div style={{ fontSize: '14px', marginBottom: '16px', color: dark ? '#f1f5f9' : '#1e293b' }}>
+                  Connect your Base Account to use all features
                 </div>
-          <SignInWithBaseButton 
-            align="center"
-            variant="solid"
-            colorScheme={theme}
-            size="medium"
-            onClick={handleSignIn}
-          />
+                
+                {/* Connection Status */}
+                <div style={{ 
+                  margin: '20px 0', 
+                  padding: '16px',
+                  background: dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
+                  borderRadius: '12px',
+                  fontSize: '13px'
+                }}>
+                  <div style={{ marginBottom: '8px' }}>
+                    {isSignedIn ? '🟢' : '🔴'} <strong>Base Account:</strong> {isSignedIn ? 'Connected ✅' : 'Not connected'} 
+                    <div style={{ fontSize: '11px', opacity: 0.7, marginTop: '2px' }}>
+                      (For everything: BasePay, campaigns, pledges)
+                    </div>
+                  </div>
+                </div>
+
+                {/* Sign In Button */}
+                {!isSignedIn && (
+                  <div style={{ marginBottom: '16px' }}>
+                    <SignInWithBaseButton 
+                      align="center"
+                      variant="solid"
+                      colorScheme={theme}
+                      size="medium"
+                      onClick={handleSignIn}
+                    />
+                  </div>
+                )}
+
+                {/* Connection Instructions */}
+                {!isSignedIn && (
+                  <div style={{ 
+                    padding: '12px',
+                    background: dark ? 'rgba(59, 130, 246, 0.1)' : 'rgba(59, 130, 246, 0.1)',
+                    borderRadius: '8px',
+                    fontSize: '12px',
+                    color: dark ? '#93c5fd' : '#3b82f6'
+                  }}>
+                    💡 <strong>Start here:</strong> Sign in with Base Account to use all features: BasePay, create campaigns, and make pledges!
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -771,6 +959,24 @@ function App() {
             </div>
           </div>
           
+          {/* Campaign Manager - handles loading campaigns from blockchain */}
+          <CampaignManager onCampaignsUpdate={handleCampaignsUpdate} />
+          
+          {/* Loading indicator for campaigns */}
+          {campaignData.loading && chainId && (
+            <div style={{
+              ...styles.card,
+              padding: '40px',
+              textAlign: 'center',
+              marginBottom: '20px'
+            }}>
+              <div style={{ fontSize: '18px', marginBottom: '16px' }}>
+                🔗 Loading campaigns from blockchain...
+              </div>
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+            </div>
+          )}
+
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%', maxWidth: '900px' }}>
             {filteredCampaigns.map(campaign => (
               <div key={campaign.id} style={{
@@ -1588,36 +1794,15 @@ function App() {
                 >
                   Cancel
                 </button>
-                <button
-                  onClick={handleCreateCampaignSubmit}
-                  style={{
-                    padding: '16px 32px',
-                    borderRadius: '16px',
-                    border: 'none',
-                    background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
-                    color: 'white',
-                    fontSize: '16px',
-                    fontWeight: '600',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease',
-                    minWidth: '180px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '8px',
-                    boxShadow: '0 4px 12px rgba(37, 99, 235, 0.3)'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.target.style.transform = 'translateY(-2px)';
-                    e.target.style.boxShadow = '0 8px 20px rgba(37, 99, 235, 0.4)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.transform = 'translateY(0)';
-                    e.target.style.boxShadow = '0 4px 12px rgba(37, 99, 235, 0.3)';
-                  }}
-                >
-                  🚀 Create Campaign
-                </button>
+                <CreateCampaignButton
+                  newCampaign={newCampaign}
+                  setNewCampaign={setNewCampaign}
+                  setShowCreateModal={setShowCreateModal}
+                  setPaymentStatus={setPaymentStatus}
+                  onCampaignCreated={handleCampaignCreated}
+                  isSignedIn={isSignedIn}
+                  universalAddress={universalAddress}
+                />
               </div>
             </div>
           </div>
