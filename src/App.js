@@ -109,7 +109,7 @@ function App() {
     chain: {
       id: 8453, // Base Mainnet
       name: 'Base Mainnet',
-      network: 'base-sepolia',
+      network: 'base',
       nativeCurrency: {
         decimals: 18,
         name: 'Ether',
@@ -480,7 +480,7 @@ function App() {
       const { id } = await pay({
         amount: selectedAmount, // Use selected amount (1, 5, 10, or 100)
         to: universalAddress, // Send to Base Account address
-        testnet: true
+        testnet: false
       });
 
       setPaymentId(id);
@@ -896,7 +896,7 @@ function App() {
       const { id } = await pay({
         amount: '5', // 5 USDC for coffee
         to: '0xF1fa20027b6202bc18e4454149C85CB01dC91Dfd',
-        testnet: true
+        testnet: false
       });
 
       setPaymentId(id);
