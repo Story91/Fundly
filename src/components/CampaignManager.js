@@ -10,17 +10,35 @@ const CampaignManager = ({ onCampaignsUpdate }) => {
   const [realCampaigns, setRealCampaigns] = useState([]);
   const [campaignsLoading, setCampaignsLoading] = useState(true);
 
+  // Force Base Sepolia for consistency with CreateCampaignButton
+  const targetChainId = 84532; // Base Sepolia
+  
   // Get total campaigns from contract
   const { data: totalCampaigns, refetch: refetchTotalCampaigns } = useReadContract({
-    address: chainId ? getContractAddress(chainId) : undefined,
+    address: getContractAddress(targetChainId),
     abi: contractAbi,
     functionName: 'campaignCount',
-    enabled: !!chainId,
+    enabled: true, // Always enabled for Base Sepolia
   });
+
+  // Debug logging
+  console.log('🔍 CampaignManager Debug:');
+  console.log('wagmi chainId:', chainId);
+  console.log('forced targetChainId:', targetChainId);
+  console.log('contract address:', getContractAddress(targetChainId));
+  console.log('totalCampaigns:', totalCampaigns);
+  console.log('totalCampaigns type:', typeof totalCampaigns);
+  console.log('totalCampaigns number:', Number(totalCampaigns));
 
   // Function to fetch real campaigns from contract
   const fetchRealCampaigns = async () => {
-    if (!totalCampaigns || !chainId || Number(totalCampaigns) === 0) {
+    console.log('🔍 fetchRealCampaigns called');
+    console.log('totalCampaigns:', totalCampaigns);
+    console.log('chainId:', chainId);
+    console.log('Number(totalCampaigns):', Number(totalCampaigns));
+    
+    if (!totalCampaigns || Number(totalCampaigns) === 0) {
+      console.log('❌ No campaigns found or missing data');
       setCampaignsLoading(false);
       setRealCampaigns([]);
       if (onCampaignsUpdate) {
@@ -61,7 +79,7 @@ const CampaignManager = ({ onCampaignsUpdate }) => {
     try {
       // Using the contract's getCampaign function to get real data
       const campaignData = await readContract(config, {
-        address: getContractAddress(chainId),
+        address: getContractAddress(targetChainId),
         abi: contractAbi,
         functionName: 'getCampaign',
         args: [campaignId],

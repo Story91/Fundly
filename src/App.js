@@ -230,7 +230,17 @@ function App() {
   ];
 
   // Use real campaigns if we have them and not loading, otherwise use mock data
+  // Debug campaign data
+  console.log('🔍 App.js Campaign Data Debug:');
+  console.log('campaignData:', campaignData);
+  console.log('campaignData.loading:', campaignData.loading);
+  console.log('campaignData.campaigns:', campaignData.campaigns);
+  console.log('campaignData.campaigns.length:', campaignData.campaigns?.length);
+  
   const campaigns = !campaignData.loading && campaignData.campaigns.length > 0 ? campaignData.campaigns : mockCampaigns;
+  
+  console.log('✅ Using campaigns:', campaigns.length > 3 ? 'MOCK DATA' : 'REAL DATA or EMPTY');
+  console.log('campaigns count:', campaigns.length);
 
   // Filter campaigns based on status
   const getFilteredCampaigns = () => {

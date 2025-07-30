@@ -213,28 +213,8 @@ const CreateCampaignButton = ({
       setTxHash(txHash);
       setPaymentStatus(`✅ Campaign created! Transaction: ${txHash.slice(0, 10)}...`);
       
-      // Sync to Supabase database after successful blockchain transaction
-      try {
-        const { createCampaign } = await import('../lib/supabase');
-        
-        await createCampaign({
-          blockchainId: 1, // This should be the actual blockchain campaign ID from the contract
-          title: newCampaign.title,
-          description: newCampaign.description,
-          category: newCampaign.category || 'Technology',
-          creatorNickname: newCampaign.creatorNickname,
-          creatorAddress: universalAddress,
-          imageUrl: finalImageUrl, // Use uploaded image URL
-          imageBlobUrl: uploadedImageUrl, // Vercel Blob URL if uploaded
-          goalUsdc: parseFloat(newCampaign.goal),
-          deadline: Math.floor(Date.now() / 1000) + durationInSeconds
-        });
-        
-        console.log('✅ Campaign synced to Supabase successfully');
-      } catch (syncError) {
-        console.warn('⚠️ Supabase sync failed:', syncError);
-        console.warn('🔄 Campaign created on blockchain - database sync can be fixed later');
-      }
+      // Skip Supabase sync for now - need to get real campaign ID from contract
+      console.log('ℹ️ Campaign created on blockchain - Supabase sync temporarily disabled');
 
     } catch (error) {
       console.error('Error creating campaign:', error);
