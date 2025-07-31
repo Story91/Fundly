@@ -6,12 +6,14 @@ import { encodeFunctionData } from 'viem';
 import { CONTRACT_CONFIG, getContractAddress } from '../contracts/contract-config';
 import contractAbi from '../contracts/CrowdfundingPlatform.abi.json';
 
-const UserDashboard = ({ styles, dark, isSignedIn, universalAddress }) => {
+const UserDashboard = ({ styles, dark, isSignedIn, universalAddress, onEditCampaign }) => {
   const { chainId } = useAccount();
   const config = useConfig();
   const [userCampaigns, setUserCampaigns] = useState([]);
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState(null); // Track which action is loading
+  
+  // Campaign editing states - moved to App.js for proper modal positioning
 
   // Force Base Mainnet for consistency with main app
   const targetChainId = 8453; // Base Mainnet
@@ -262,6 +264,13 @@ const UserDashboard = ({ styles, dark, isSignedIn, universalAddress }) => {
     }
   };
 
+  // Handle edit campaign - call parent callback
+  const handleEditCampaign = (campaign) => {
+    if (onEditCampaign) {
+      onEditCampaign(campaign);
+    }
+  };
+
   if (!isSignedIn || !universalAddress) {
     return (
       <div style={styles.card}>
@@ -389,6 +398,25 @@ const UserDashboard = ({ styles, dark, isSignedIn, universalAddress }) => {
                 </button>
               )}
               
+              {/* Edit Campaign Button - always available */}
+              <button 
+                onClick={() => handleEditCampaign(campaign)}
+                style={{
+                  width: '100%',
+                  padding: '6px 12px',
+                  borderRadius: '6px',
+                  border: 'none',
+                  background: '#2563eb',
+                  color: 'white',
+                  fontSize: '12px',
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
+                  marginBottom: campaign.canCancel ? '6px' : '0'
+                }}
+              >
+                ✏️ Edit Campaign
+              </button>
+              
               {campaign.canCancel && (
                 <button 
                   onClick={() => handleCancelCampaign(campaign)}
@@ -412,6 +440,8 @@ const UserDashboard = ({ styles, dark, isSignedIn, universalAddress }) => {
           ))}
         </div>
       )}
+
+      {/* Campaign Edit Modal moved to App.js for proper positioning */}
     </div>
   );
 };

@@ -17,6 +17,10 @@ CREATE TABLE IF NOT EXISTS campaigns (
   backers_count INTEGER DEFAULT 0,
   deadline TIMESTAMPTZ NOT NULL,
   status VARCHAR(50) DEFAULT 'active',
+  -- Social media and additional metadata
+  twitter_url TEXT,
+  website_url TEXT,
+  extended_description TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -88,3 +92,9 @@ INSERT INTO campaigns (
     NOW() + INTERVAL '45 days'
   )
 ON CONFLICT (blockchain_id) DO NOTHING;
+
+-- Add new columns for campaign metadata if they don't exist
+-- Run these after creating the table above
+ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS twitter_url TEXT;
+ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS website_url TEXT;
+ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS extended_description TEXT;

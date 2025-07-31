@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 
-// Read environment variables at module level
+// Read environment variables at module level (Next.js uses NEXT_PUBLIC_ prefix)
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
@@ -191,5 +191,69 @@ export async function getCampaignsByCreator(creatorAddress) {
   } catch (error) {
     console.error('Error getting campaigns by creator:', error)
     return []
+  }
+}
+
+// Update campaign metadata (for editing campaigns)
+export async function updateCampaignMetadata(blockchainId, { 
+  imageUrl, 
+  imageBlobUrl, 
+  twitterUrl, 
+  websiteUrl, 
+  extendedDescription 
+}) {
+  try {
+    const client = getSupabaseClient();
+    
+    // Prepare update object - only include defined values
+    const updateData = {
+      updated_at: new Date().toISOString()
+    };
+    
+    if (imageUrl !== undefined) updateData.image_url = imageUrl;
+    if (imageBlobUrl !== undefined) updateData.image_blob_url = imageBlobUrl;
+    if (twitterUrl !== undefined) updateData.twitter_url = twitterUrl;
+    if (websiteUrl !== undefined) updateData.website_url = websiteUrl;
+    if (extendedDescription !== undefined) updateData.extended_description = extendedDescription;
+
+    const { data, error } = await client
+      .from('campaigns')
+      .update(updateData)
+      .eq('blockchain_id', blockchainId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error updating campaign metadata:', error);
+      throw error;
+    }
+
+    console.log('✅ Campaign metadata updated:', data);
+    return data;
+  } catch (error) {
+    console.error('Error updating campaign metadata:', error);
+    throw error;
+  }
+}
+
+// Get campaign metadata by blockchain ID
+export async function getCampaignMetadata(blockchainId) {
+  try {
+    const client = getSupabaseClient();
+    const { data, error } = await client
+      .from('campaigns')
+      .select('image_url, image_blob_url, twitter_url, website_url, extended_description')
+      .eq('blockchain_id', blockchainId)
+      .single();
+
+    if (error && error.code !== 'PGRST116') { // PGRST116 = no rows found
+      console.error('Error getting campaign metadata:', error);
+      return null;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error getting campaign metadata:', error);
+    return null;
   }
 }

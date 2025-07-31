@@ -15,7 +15,9 @@ import CreateCampaignButton from './components/CreateCampaignButton';
 import UserDashboard from './components/UserDashboard';
 import ImageUploadField from './components/ImageUploadField';
 import CampaignListSupabase from './components/CampaignListSupabase';
-import ToastContainer from './components/ToastContainer';
+import ToastContainer, { addToast } from './components/ToastContainer';
+import { updateCampaignMetadata, getCampaignMetadata } from './lib/firebase';
+import { uploadImageToBlob } from './lib/upload';
 
 function App() {
   // Wagmi hooks for contract integration
@@ -75,6 +77,19 @@ function App() {
   // Modal states
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showAboutModal, setShowAboutModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingCampaign, setEditingCampaign] = useState(null);
+
+  // Edit campaign form states
+  const [editFormData, setEditFormData] = useState({
+    twitterUrl: '',
+    websiteUrl: '',
+    extendedDescription: '',
+    imageUrl: ''
+  });
+  const [isLoadingMetadata, setIsLoadingMetadata] = useState(false);
+  const [isSavingMetadata, setIsSavingMetadata] = useState(false);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
 
   // Create Campaign form states
   const [newCampaign, setNewCampaign] = useState({
@@ -132,18 +147,18 @@ function App() {
 
   // Mock campaigns removed - using only real blockchain campaigns now
   /* Example campaign structure for reference:
-  {
-    id: 1,
-    title: "Clean Water for Rural Communities",
-    description: "Help us build water wells in underserved communities across East Africa.",
-    image: "https://images.unsplash.com/photo-1541919329513-35f7af297129?w=400&h=300&fit=crop",
-    creator: "WaterHope Foundation",
-    raised: 12450,
-    goal: 50000,
-    backers: 89,
-    daysLeft: 23,
-    category: "Environment",
-    status: "Active"
+    {
+      id: 1,
+      title: "Clean Water for Rural Communities",
+      description: "Help us build water wells in underserved communities across East Africa.",
+      image: "https://images.unsplash.com/photo-1541919329513-35f7af297129?w=400&h=300&fit=crop",
+      creator: "WaterHope Foundation",
+      raised: 12450,
+      goal: 50000,
+      backers: 89,
+      daysLeft: 23,
+      category: "Environment",
+      status: "Active"
   } */
 
   // Use real campaigns if we have them and not loading, otherwise use mock data
@@ -706,6 +721,101 @@ function App() {
     alert('Need help? Contact us at hello@fundly.com or check our documentation! 📚');
   };
 
+  // Handle campaign editing
+  const handleEditCampaign = async (campaign) => {
+    setEditingCampaign(campaign);
+    setShowEditModal(true);
+    
+    // Load existing metadata from Supabase
+    setIsLoadingMetadata(true);
+    try {
+      const metadata = await getCampaignMetadata(campaign.id);
+      if (metadata) {
+        setEditFormData({
+          twitterUrl: metadata.twitter_url || '',
+          websiteUrl: metadata.website_url || '',
+          extendedDescription: metadata.extended_description || '',
+          imageUrl: metadata.image_url || metadata.image_blob_url || ''
+        });
+      } else {
+        // Reset form if no metadata found
+        setEditFormData({
+          twitterUrl: '',
+          websiteUrl: '',
+          extendedDescription: '',
+          imageUrl: ''
+        });
+      }
+    } catch (error) {
+      console.error('Error loading campaign metadata:', error);
+      addToast('Failed to load campaign data', 'error');
+      setEditFormData({
+        twitterUrl: '',
+        websiteUrl: '',
+        extendedDescription: '',
+        imageUrl: ''
+      });
+    } finally {
+      setIsLoadingMetadata(false);
+    }
+  };
+
+    // Handle image upload to Vercel Blob
+  const handleImageUpload = async (file) => {
+    if (!file || !editingCampaign) return;
+
+    setIsUploadingImage(true);
+    try {
+      // Upload using our upload utility
+      const result = await uploadImageToBlob(file, editingCampaign.id);
+      
+      // Update form data with new image URL
+      setEditFormData(prev => ({
+        ...prev,
+        imageUrl: result.url
+      }));
+
+      addToast('Image uploaded successfully! 📸', 'success');
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      if (error.message.includes('token') || error.message.includes('REACT_APP_BLOB_READ_WRITE_TOKEN')) {
+        addToast('Missing Vercel Blob token - check .env.local', 'error');
+      } else {
+        addToast('Failed to upload image', 'error');
+      }
+    } finally {
+      setIsUploadingImage(false);
+    }
+  };
+
+  // Handle saving campaign metadata
+  const handleSaveCampaignMetadata = async () => {
+    if (!editingCampaign) return;
+    
+    setIsSavingMetadata(true);
+    try {
+      await updateCampaignMetadata(editingCampaign.id, {
+        twitterUrl: editFormData.twitterUrl,
+        websiteUrl: editFormData.websiteUrl,
+        extendedDescription: editFormData.extendedDescription,
+        imageBlobUrl: editFormData.imageUrl // Save to image_blob_url column for Vercel Blob URLs
+      });
+      
+      addToast('Campaign updated successfully! 🎉', 'success');
+      setShowEditModal(false);
+      
+      // Refresh campaign data to show changes
+      if (campaignData.refetch) {
+        campaignData.refetch();
+      }
+    } catch (error) {
+      console.error('Error saving campaign metadata:', error);
+      addToast('Failed to save changes', 'error');
+    } finally {
+      setIsSavingMetadata(false);
+    }
+  };
+
   // Campaign creation logic moved to CreateCampaignButton component
 
   // Handle About donation (Buy us coffee)
@@ -972,6 +1082,7 @@ function App() {
             dark={dark} 
             isSignedIn={isSignedIn}
             universalAddress={universalAddress}
+            onEditCampaign={handleEditCampaign}
           />
           
           {isSignedIn ? (
@@ -1452,16 +1563,16 @@ function App() {
                               </span>
                             </div>
                             
-                            <BasePayButton 
-                              colorScheme={theme}
-                              onClick={() => handleBasePay(campaign)}
-                              style={{
-                                fontSize: '11px',
-                                padding: '8px 16px',
-                                transform: 'scale(0.9)',
-                                borderRadius: '10px'
-                              }}
-                            />
+                              <BasePayButton 
+                                colorScheme={theme}
+                                onClick={() => handleBasePay(campaign)}
+                                style={{
+                                  fontSize: '11px',
+                                  padding: '8px 16px',
+                                  transform: 'scale(0.9)',
+                                  borderRadius: '10px'
+                                }}
+                              />
                           </div>
                         </>
                       )}
@@ -1635,17 +1746,17 @@ function App() {
                   borderRadius: '6px'
                 }} 
               />
-              <h2 style={{ 
-                margin: 0, 
-                fontSize: '28px', 
-                fontWeight: '700',
-                background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                backgroundClip: 'text'
-              }}>
-                🚀 Create New Campaign
-              </h2>
+                <h2 style={{ 
+                  margin: 0, 
+                  fontSize: '28px', 
+                  fontWeight: '700',
+                  background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text'
+                }}>
+                  🚀 Create New Campaign
+                </h2>
             </div>
                 <button
                   onClick={() => setShowCreateModal(false)}
@@ -2065,7 +2176,7 @@ function App() {
                 fontWeight: '700'
               }}>
                 About Fundly
-              </h2>
+            </h2>
             </div>
             
             <div style={{ fontSize: '16px', lineHeight: '1.6', marginBottom: '24px' }}>
@@ -2130,7 +2241,311 @@ function App() {
         </div>
       )}
 
-      {/* Unsplash Image Picker Modal removed - will be added to campaign editing later */}
+      {/* Campaign Edit Modal - positioned at app level for proper centering */}
+      {showEditModal && editingCampaign && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.8)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: '20px'
+        }}>
+          <div style={{
+            backgroundColor: dark ? '#1e293b' : 'white',
+            borderRadius: '24px',
+            width: '100%',
+            maxWidth: '600px',
+            maxHeight: '90vh',
+            overflow: 'auto',
+            position: 'relative',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+            border: dark ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.1)'
+          }}>
+            {/* Header */}
+            <div style={{
+              padding: '32px 32px 0 32px',
+              borderBottom: `1px solid ${dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
+              marginBottom: '32px'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                  <img 
+                    src="/logo512.png" 
+                    alt="Fundly Logo" 
+                    style={{
+                      width: '36px',
+                      height: '36px',
+                      borderRadius: '6px'
+                    }} 
+                  />
+                  <h2 style={{ 
+                    margin: 0, 
+                    fontSize: '28px', 
+                    fontWeight: '700',
+                    background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    backgroundClip: 'text'
+                  }}>
+                    ✏️ Edit Campaign
+                  </h2>
+                </div>
+              <button
+                  onClick={() => setShowEditModal(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                    fontSize: '28px',
+                  cursor: 'pointer',
+                    color: dark ? '#94a3b8' : '#64748b',
+                    padding: '8px',
+                    borderRadius: '12px',
+                    transition: 'all 0.2s ease'
+                }}
+              >
+                ✕
+              </button>
+              </div>
+              <div style={{ fontSize: '16px', opacity: 0.8 }}>
+                Campaign: <strong>{editingCampaign.title}</strong> (#{editingCampaign.id})
+              </div>
+            </div>
+
+            {/* Form Content */}
+            <div style={{ padding: '0 32px 32px 32px' }}>
+              {/* Campaign Image Upload */}
+              <div style={{ marginBottom: '24px' }}>
+                <label style={{ 
+                  display: 'block', 
+                  marginBottom: '12px', 
+                  fontSize: '16px', 
+                  fontWeight: '600',
+                  color: dark ? '#f1f5f9' : '#1e293b'
+                }}>
+                  📸 Campaign Image
+                </label>
+                {/* Current Image Preview */}
+                {editFormData.imageUrl && (
+            <div style={{ marginBottom: '16px' }}>
+                    <img 
+                      src={editFormData.imageUrl} 
+                      alt="Campaign" 
+                style={{
+                        width: '100%',
+                        maxHeight: '200px',
+                        objectFit: 'cover',
+                        borderRadius: '12px',
+                        border: `1px solid ${dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`
+                      }}
+                    />
+            </div>
+                )}
+
+                {/* File Upload Input */}
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files[0];
+                    if (file) handleImageUpload(file);
+                  }}
+                  disabled={isUploadingImage || isLoadingMetadata}
+                  style={{ display: 'none' }}
+                  id="imageUpload"
+                />
+
+                {/* Upload Button */}
+                <label
+                  htmlFor="imageUpload"
+                  style={{
+                    width: '100%',
+                    minHeight: '120px',
+                    padding: '32px 20px',
+                    borderRadius: '16px',
+                    border: `2px dashed ${dark ? 'rgba(16, 185, 129, 0.3)' : 'rgba(16, 185, 129, 0.4)'}`,
+                    backgroundColor: dark ? 'rgba(16, 185, 129, 0.05)' : 'rgba(16, 185, 129, 0.08)',
+                    color: dark ? '#4ade80' : '#059669',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    cursor: (isUploadingImage || isLoadingMetadata) ? 'not-allowed' : 'pointer',
+                    transition: 'all 0.3s ease',
+                display: 'flex', 
+                    flexDirection: 'column',
+                alignItems: 'center', 
+                    justifyContent: 'center',
+                    textAlign: 'center',
+                    boxSizing: 'border-box',
+                    opacity: (isUploadingImage || isLoadingMetadata) ? 0.5 : 1
+                  }}
+                >
+                  {isUploadingImage ? '🔄 Uploading...' : '📁 Upload Campaign Image'}
+                  <div style={{ fontSize: '12px', opacity: 0.8, marginTop: '8px' }}>
+                    {isUploadingImage ? 'Please wait...' : 'Click to select image (JPG, PNG, WebP)'}
+              </div>
+                </label>
+              </div>
+
+              {/* Social Media Links */}
+              <div style={{ marginBottom: '24px' }}>
+                <label style={{ 
+                  display: 'block', 
+                  marginBottom: '12px', 
+                  fontSize: '16px', 
+                  fontWeight: '600',
+                  color: dark ? '#f1f5f9' : '#1e293b'
+                }}>
+                  🔗 Social Media Links
+                </label>
+                
+                {/* X/Twitter */}
+                <div style={{ marginBottom: '16px' }}>
+                  <label style={{ fontSize: '14px', fontWeight: '500', marginBottom: '8px', display: 'block' }}>
+                    🐦 X (Twitter) Profile
+                  </label>
+                  <input
+                    type="url"
+                    placeholder="https://x.com/yourusername"
+                    value={editFormData.twitterUrl}
+                    onChange={(e) => setEditFormData({...editFormData, twitterUrl: e.target.value})}
+                    disabled={isLoadingMetadata}
+                    style={{
+                      width: '100%',
+                      padding: '12px 16px',
+                      borderRadius: '12px',
+                      border: `2px solid ${dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
+                      backgroundColor: dark ? 'rgba(255,255,255,0.05)' : '#f8fafc',
+                      color: dark ? '#f1f5f9' : '#1e293b',
+                      fontSize: '14px',
+                      outline: 'none',
+                      boxSizing: 'border-box',
+                      opacity: isLoadingMetadata ? 0.5 : 1
+                    }}
+                  />
+                </div>
+
+                {/* Website */}
+                <div>
+                  <label style={{ fontSize: '14px', fontWeight: '500', marginBottom: '8px', display: 'block' }}>
+                    🌐 Website
+                  </label>
+                  <input
+                    type="url"
+                    placeholder="https://yourwebsite.com"
+                    value={editFormData.websiteUrl}
+                    onChange={(e) => setEditFormData({...editFormData, websiteUrl: e.target.value})}
+                    disabled={isLoadingMetadata}
+                      style={{
+                        width: '100%',
+                      padding: '12px 16px',
+                      borderRadius: '12px',
+                      border: `2px solid ${dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
+                      backgroundColor: dark ? 'rgba(255,255,255,0.05)' : '#f8fafc',
+                      color: dark ? '#f1f5f9' : '#1e293b',
+                      fontSize: '14px',
+                      outline: 'none',
+                      boxSizing: 'border-box',
+                      opacity: isLoadingMetadata ? 0.5 : 1
+                    }}
+                  />
+                    </div>
+                  </div>
+
+              {/* Extended Description */}
+              <div style={{ marginBottom: '32px' }}>
+                <label style={{ 
+                  display: 'block', 
+                  marginBottom: '12px', 
+                  fontSize: '16px', 
+                  fontWeight: '600',
+                  color: dark ? '#f1f5f9' : '#1e293b'
+                }}>
+                  📝 Extended Description
+                </label>
+                <textarea
+                  placeholder="Add more details about your campaign, team, roadmap, etc..."
+                  rows={4}
+                  value={editFormData.extendedDescription}
+                  onChange={(e) => setEditFormData({...editFormData, extendedDescription: e.target.value})}
+                  disabled={isLoadingMetadata}
+                  style={{
+                    width: '100%',
+                    padding: '16px 20px',
+                    borderRadius: '16px',
+                    border: `2px solid ${dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
+                    backgroundColor: dark ? 'rgba(255,255,255,0.05)' : '#f8fafc',
+                    color: dark ? '#f1f5f9' : '#1e293b',
+                    fontSize: '16px',
+                    fontWeight: '500',
+                    outline: 'none',
+                    resize: 'vertical',
+                    minHeight: '120px',
+                    fontFamily: 'inherit',
+                    boxSizing: 'border-box',
+                    opacity: isLoadingMetadata ? 0.5 : 1
+                  }}
+                />
+              </div>
+
+              {/* Action Buttons */}
+            <div style={{ 
+                display: 'flex', 
+                gap: '16px', 
+                justifyContent: 'flex-end',
+                paddingTop: '24px',
+                borderTop: `1px solid ${dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`
+              }}>
+                <button
+                  onClick={() => setShowEditModal(false)}
+                  disabled={isSavingMetadata || isUploadingImage}
+                  style={{
+                    padding: '16px 32px',
+                    borderRadius: '16px',
+                    border: `2px solid ${dark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)'}`,
+                    backgroundColor: 'transparent',
+                    color: dark ? '#94a3b8' : '#64748b',
+                    fontSize: '16px',
+                    fontWeight: '600',
+                    cursor: (isSavingMetadata || isUploadingImage) ? 'not-allowed' : 'pointer',
+                    transition: 'all 0.2s ease',
+                    minWidth: '120px',
+                    opacity: (isSavingMetadata || isUploadingImage) ? 0.5 : 1
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveCampaignMetadata}
+                  disabled={isSavingMetadata || isLoadingMetadata || isUploadingImage}
+                  style={{
+                    padding: '16px 32px',
+                    borderRadius: '16px',
+                    border: 'none',
+                    background: (isSavingMetadata || isLoadingMetadata || isUploadingImage) ? '#94a3b8' : 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+                    color: 'white',
+                    fontSize: '16px',
+                    fontWeight: '600',
+                    cursor: (isSavingMetadata || isLoadingMetadata || isUploadingImage) ? 'not-allowed' : 'pointer',
+                    transition: 'all 0.2s ease',
+                    minWidth: '180px',
+                    boxShadow: (isSavingMetadata || isLoadingMetadata || isUploadingImage) ? 'none' : '0 4px 12px rgba(37, 99, 235, 0.3)'
+                  }}
+                >
+                  {isLoadingMetadata ? '📂 Loading...' : 
+                   isSavingMetadata ? '💾 Saving...' : 
+                   isUploadingImage ? '📸 Uploading...' : 
+                   '💾 Save Changes'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
        
     </div>
