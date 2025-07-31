@@ -1209,11 +1209,78 @@ function App() {
 
       {/* Main Content */}
       <div style={styles.mainContent}>
-        {/* Left Sidebar - Wallet Management */}
-        <div style={styles.sidebar}>
-          <h3 style={{ marginTop: 0, marginBottom: '20px', fontSize: '20px' }}>
-            💼 Wallet Manager
-          </h3>
+        {/* Left Sidebar - Modern Wallet Management */}
+        <div style={{
+          ...styles.sidebar,
+          background: dark 
+            ? 'linear-gradient(180deg, rgba(30, 64, 175, 0.6) 0%, rgba(30, 58, 138, 0.4) 100%)'
+            : 'linear-gradient(180deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 252, 0.9) 100%)',
+          position: 'relative',
+          overflow: 'hidden'
+        }}>
+          {/* Background decorative elements */}
+          <div style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            height: '100px',
+            background: dark 
+              ? 'linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(147, 51, 234, 0.1))'
+              : 'linear-gradient(135deg, rgba(59, 130, 246, 0.05), rgba(147, 51, 234, 0.05))',
+            borderRadius: '0 0 20px 20px',
+            zIndex: 0
+          }}></div>
+          
+          {/* Header with icon and title */}
+          <div style={{ 
+            position: 'relative', 
+            zIndex: 1,
+            marginBottom: '32px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px'
+          }}>
+            <div style={{
+              width: '48px',
+              height: '48px',
+              borderRadius: '16px',
+              background: dark 
+                ? 'linear-gradient(45deg, #3b82f6, #8b5cf6)'
+                : 'linear-gradient(45deg, #2563eb, #7c3aed)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '24px',
+              boxShadow: dark 
+                ? '0 8px 32px rgba(59, 130, 246, 0.3)'
+                : '0 8px 32px rgba(37, 99, 235, 0.2)'
+            }}>
+              💼
+            </div>
+            <div>
+              <h3 style={{ 
+                margin: 0, 
+                fontSize: '22px', 
+                fontWeight: '700',
+                background: dark 
+                  ? 'linear-gradient(45deg, #ffffff, #e0f2fe)'
+                  : 'linear-gradient(45deg, #1e293b, #475569)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text'
+              }}>
+                Wallet Manager
+              </h3>
+              <div style={{
+                fontSize: '12px',
+                opacity: 0.7,
+                marginTop: '2px'
+              }}>
+                Control Center
+              </div>
+            </div>
+          </div>
           
           {/* Contract Connection Status - Now using ContractStatus component */}
           <ContractStatus styles={styles} />
@@ -1228,17 +1295,69 @@ function App() {
           />
           
           {isSignedIn ? (
-            <div>
-      <div style={styles.card}>
+            <div style={{ position: 'relative', zIndex: 1 }}>
+              {/* Modern Main Account Card */}
+              <div style={{
+                ...styles.card,
+                background: dark 
+                  ? 'linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(22, 163, 74, 0.05))'
+                  : 'linear-gradient(135deg, rgba(34, 197, 94, 0.05), rgba(22, 163, 74, 0.02))',
+                border: dark 
+                  ? '1px solid rgba(34, 197, 94, 0.2)' 
+                  : '1px solid rgba(34, 197, 94, 0.1)',
+                position: 'relative',
+                overflow: 'hidden',
+                transition: 'all 0.3s ease',
+                ':hover': {
+                  transform: 'translateY(-2px)',
+                  boxShadow: dark 
+                    ? '0 25px 80px rgba(34, 197, 94, 0.15)' 
+                    : '0 25px 80px rgba(34, 197, 94, 0.1)'
+                }
+              }}>
+                {/* Success accent line */}
+                <div style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  height: '3px',
+                  background: 'linear-gradient(90deg, #22c55e, #16a34a)',
+                  borderRadius: '20px 20px 0 0'
+                }}></div>
+                
+                {/* Header with icon and logout */}
                 <div style={{ 
                   display: 'flex', 
                   justifyContent: 'space-between', 
                   alignItems: 'center',
-                  marginBottom: '8px' 
+                  marginBottom: '20px' 
                 }}>
-                  <div style={{ fontSize: '14px', fontWeight: 'bold' }}>
-                    🏦 Main Account
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{
+                      width: '40px',
+                      height: '40px',
+                      borderRadius: '12px',
+                      background: 'linear-gradient(45deg, #22c55e, #16a34a)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '20px',
+                      boxShadow: '0 8px 32px rgba(34, 197, 94, 0.3)'
+                    }}>
+                      🏦
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '16px', fontWeight: '700', color: dark ? '#fff' : '#1e293b' }}>
+                        Main Account
+                      </div>
+                      <div style={{ fontSize: '12px', opacity: 0.7 }}>
+                        Base Network
+                      </div>
+                    </div>
                   </div>
+                  
+                  {/* Modern Logout Button */}
                   <button
                     onClick={() => {
                       setIsSignedIn(false);
@@ -1248,83 +1367,263 @@ function App() {
                       addToast('👋 Logged out successfully', 'success');
                     }}
                     style={{
-                      padding: '4px 8px',
-                      borderRadius: '6px',
+                      padding: '8px 12px',
+                      borderRadius: '10px',
                       border: 'none',
-                      background: '#ef4444',
+                      background: dark 
+                        ? 'linear-gradient(45deg, rgba(239, 68, 68, 0.8), rgba(220, 38, 38, 0.8))'
+                        : 'linear-gradient(45deg, #ef4444, #dc2626)',
                       color: 'white',
-                      fontSize: '11px',
-                      fontWeight: 'bold',
+                      fontSize: '12px',
+                      fontWeight: '600',
                       cursor: 'pointer',
-                      transition: 'all 0.2s ease'
+                      transition: 'all 0.3s ease',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      boxShadow: '0 4px 16px rgba(239, 68, 68, 0.3)'
                     }}
-                    onMouseOver={(e) => e.target.style.background = '#dc2626'}
-                    onMouseOut={(e) => e.target.style.background = '#ef4444'}
+                    onMouseOver={(e) => {
+                      e.target.style.transform = 'translateY(-2px)';
+                      e.target.style.boxShadow = '0 8px 24px rgba(239, 68, 68, 0.4)';
+                    }}
+                    onMouseOut={(e) => {
+                      e.target.style.transform = 'translateY(0)';
+                      e.target.style.boxShadow = '0 4px 16px rgba(239, 68, 68, 0.3)';
+                    }}
                   >
                     🚪 Logout
                   </button>
                 </div>
-                <div style={{ fontSize: '11px', fontWeight: 'bold', marginBottom: '8px', opacity: 0.9 }}>
-                  BaseAccount Address:
+                
+                {/* Address Section */}
+                <div style={{ marginBottom: '16px' }}>
+                  <div style={{ 
+                    fontSize: '13px', 
+                    fontWeight: '600', 
+                    marginBottom: '12px', 
+                    opacity: 0.9,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}>
+                    <span>🔗</span>
+                    BaseAccount Address
+                  </div>
+                  
+                  {/* Modern Address Display */}
+                  <div 
+                    onClick={() => {
+                      navigator.clipboard.writeText(universalAddress);
+                      addToast('📋 Address copied to clipboard!', 'success');
+                    }}
+                    style={{ 
+                      fontSize: '11px',
+                      padding: '12px 16px',
+                      background: dark 
+                        ? 'linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03))'
+                        : 'linear-gradient(135deg, rgba(0,0,0,0.03), rgba(0,0,0,0.01))',
+                      borderRadius: '12px',
+                      cursor: 'pointer',
+                      wordBreak: 'break-all',
+                      lineHeight: '1.4',
+                      border: dark 
+                        ? '1px solid rgba(255,255,255,0.1)' 
+                        : '1px solid rgba(0,0,0,0.05)',
+                      transition: 'all 0.3s ease',
+                      position: 'relative',
+                      fontFamily: 'monospace',
+                      fontWeight: '500'
+                    }}
+                    onMouseOver={(e) => {
+                      e.target.style.background = dark 
+                        ? 'linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(59, 130, 246, 0.05))'
+                        : 'linear-gradient(135deg, rgba(59, 130, 246, 0.05), rgba(59, 130, 246, 0.02))';
+                      e.target.style.border = dark 
+                        ? '1px solid rgba(59, 130, 246, 0.3)' 
+                        : '1px solid rgba(59, 130, 246, 0.2)';
+                      e.target.style.transform = 'translateY(-1px)';
+                    }}
+                    onMouseOut={(e) => {
+                      e.target.style.background = dark 
+                        ? 'linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03))'
+                        : 'linear-gradient(135deg, rgba(0,0,0,0.03), rgba(0,0,0,0.01))';
+                      e.target.style.border = dark 
+                        ? '1px solid rgba(255,255,255,0.1)' 
+                        : '1px solid rgba(0,0,0,0.05)';
+                      e.target.style.transform = 'translateY(0)';
+                    }}
+                    title="Click to copy address"
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '14px' }}>📋</span>
+                      <span>{universalAddress}</span>
+                    </div>
+                  </div>
                 </div>
-                <div 
-                  onClick={() => {
-                    navigator.clipboard.writeText(universalAddress);
-                                    addToast('📋 Address copied to clipboard!', 'success');
-                  }}
-                  style={{ 
-                    fontSize: '10px', 
-                    opacity: 0.8, 
-                    marginBottom: '10px',
-                    padding: '8px',
-                    backgroundColor: dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    wordBreak: 'break-all',
-                    lineHeight: '1.3',
-                    border: `1px dashed ${dark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)'}`,
-                    transition: 'all 0.2s ease'
-                  }}
-                  onMouseOver={(e) => {
-                    e.target.style.backgroundColor = dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
-                    e.target.style.borderStyle = 'solid';
-                  }}
-                  onMouseOut={(e) => {
-                    e.target.style.backgroundColor = dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
-                    e.target.style.borderStyle = 'dashed';
-                  }}
-                  title="Click to copy address"
-                >
-                  📋 {universalAddress}
-                </div>
-                <div style={{ fontSize: '12px', color: '#28a745' }}>
-                  ✅ Connected
+                
+                {/* Status Badge */}
+                <div style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '8px',
+                  padding: '8px 12px',
+                  background: 'linear-gradient(45deg, rgba(34, 197, 94, 0.1), rgba(22, 163, 74, 0.1))',
+                  borderRadius: '8px',
+                  border: '1px solid rgba(34, 197, 94, 0.2)'
+                }}>
+                  <div style={{
+                    width: '8px',
+                    height: '8px',
+                    borderRadius: '50%',
+                    background: '#22c55e',
+                    boxShadow: '0 0 12px rgba(34, 197, 94, 0.5)'
+                  }}></div>
+                  <span style={{ fontSize: '13px', fontWeight: '600', color: '#22c55e' }}>
+                    Connected
+                  </span>
                 </div>
               </div>
 
-                             {/* Payment Methods Info */}
-               <div style={styles.card}>
-                 <div style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '12px' }}>
-                   💳 How Pledging Works
-                 </div>
-                 <div style={{ marginBottom: '8px' }}>
-                   <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#2563eb', marginBottom: '4px' }}>
-                     1️⃣ Select Amount
-                   </div>
-                   <div style={{ fontSize: '11px', opacity: 0.8, lineHeight: '1.4' }}>
-                     Choose $1, $5, $10, or $100 USDC per campaign
-                   </div>
-                 </div>
-                 <div>
-                   <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#2563eb', marginBottom: '4px' }}>
-                     2️⃣ Pledge with BasePay
-                   </div>
-                   <div style={{ fontSize: '11px', opacity: 0.8, lineHeight: '1.4' }}>
-                     Direct USDC pledge to campaign<br/>
-                     (First time: one approval, then instant forever!)
-                   </div>
-                 </div>
-               </div>
+              {/* Modern How Pledging Works Card */}
+              <div style={{
+                ...styles.card,
+                background: dark 
+                  ? 'linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(37, 99, 235, 0.05))'
+                  : 'linear-gradient(135deg, rgba(59, 130, 246, 0.05), rgba(37, 99, 235, 0.02))',
+                border: dark 
+                  ? '1px solid rgba(59, 130, 246, 0.2)' 
+                  : '1px solid rgba(59, 130, 246, 0.1)',
+                position: 'relative',
+                overflow: 'hidden'
+              }}>
+                {/* Accent line */}
+                <div style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  height: '3px',
+                  background: 'linear-gradient(90deg, #3b82f6, #2563eb)',
+                  borderRadius: '20px 20px 0 0'
+                }}></div>
+                
+                {/* Header */}
+                <div style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '12px',
+                  marginBottom: '20px'
+                }}>
+                  <div style={{
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '12px',
+                    background: 'linear-gradient(45deg, #3b82f6, #2563eb)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '20px',
+                    boxShadow: '0 8px 32px rgba(59, 130, 246, 0.3)'
+                  }}>
+                    💳
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '16px', fontWeight: '700', color: dark ? '#fff' : '#1e293b' }}>
+                      How Pledging Works
+                    </div>
+                    <div style={{ fontSize: '12px', opacity: 0.7 }}>
+                      Quick Guide
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Steps */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  {/* Step 1 */}
+                  <div style={{
+                    padding: '16px',
+                    background: dark 
+                      ? 'rgba(255,255,255,0.03)' 
+                      : 'rgba(255,255,255,0.7)',
+                    borderRadius: '12px',
+                    border: dark 
+                      ? '1px solid rgba(255,255,255,0.05)' 
+                      : '1px solid rgba(0,0,0,0.05)'
+                  }}>
+                    <div style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '10px',
+                      marginBottom: '8px'
+                    }}>
+                      <div style={{
+                        width: '24px',
+                        height: '24px',
+                        borderRadius: '6px',
+                        background: 'linear-gradient(45deg, #10b981, #059669)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '12px',
+                        fontWeight: '700',
+                        color: 'white'
+                      }}>
+                        1
+                      </div>
+                      <span style={{ fontSize: '13px', fontWeight: '600', color: dark ? '#fff' : '#1e293b' }}>
+                        Select Amount
+                      </span>
+                    </div>
+                    <div style={{ fontSize: '11px', opacity: 0.8, lineHeight: '1.4', marginLeft: '34px' }}>
+                      Choose $1, $5, $10, or $100 USDC per campaign
+                    </div>
+                  </div>
+                  
+                  {/* Step 2 */}
+                  <div style={{
+                    padding: '16px',
+                    background: dark 
+                      ? 'rgba(255,255,255,0.03)' 
+                      : 'rgba(255,255,255,0.7)',
+                    borderRadius: '12px',
+                    border: dark 
+                      ? '1px solid rgba(255,255,255,0.05)' 
+                      : '1px solid rgba(0,0,0,0.05)'
+                  }}>
+                    <div style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '10px',
+                      marginBottom: '8px'
+                    }}>
+                      <div style={{
+                        width: '24px',
+                        height: '24px',
+                        borderRadius: '6px',
+                        background: 'linear-gradient(45deg, #3b82f6, #2563eb)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '12px',
+                        fontWeight: '700',
+                        color: 'white'
+                      }}>
+                        2
+                      </div>
+                      <span style={{ fontSize: '13px', fontWeight: '600', color: dark ? '#fff' : '#1e293b' }}>
+                        Pledge with BasePay
+                      </span>
+                    </div>
+                    <div style={{ fontSize: '11px', opacity: 0.8, lineHeight: '1.4', marginLeft: '34px' }}>
+                      Direct USDC pledge to campaign<br/>
+                      <span style={{ color: '#3b82f6', fontWeight: '600' }}>
+                        (First time: one approval, then instant forever!)
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
 
               
 
@@ -1348,54 +1647,168 @@ function App() {
               )}
             </div>
           ) : (
-            <div style={styles.card}>
-              <div style={{ textAlign: 'center', padding: '20px 0' }}>
-                <div style={{ fontSize: '48px', marginBottom: '16px' }}>🔐</div>
-                <div style={{ fontSize: '14px', marginBottom: '16px', color: dark ? '#f1f5f9' : '#1e293b' }}>
-                  Connect your Base Account to use all features
-                </div>
-                
-                {/* Connection Status */}
+            <div style={{
+              ...styles.card,
+              background: dark 
+                ? 'linear-gradient(135deg, rgba(168, 85, 247, 0.1), rgba(139, 92, 246, 0.05))'
+                : 'linear-gradient(135deg, rgba(168, 85, 247, 0.05), rgba(139, 92, 246, 0.02))',
+              border: dark 
+                ? '1px solid rgba(168, 85, 247, 0.2)' 
+                : '1px solid rgba(168, 85, 247, 0.1)',
+              position: 'relative',
+              overflow: 'hidden',
+              textAlign: 'center'
+            }}>
+              {/* Accent line */}
+              <div style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                height: '3px',
+                background: 'linear-gradient(90deg, #a855f7, #8b5cf6)',
+                borderRadius: '20px 20px 0 0'
+              }}></div>
+              
+              {/* Lock Icon with Animation */}
+              <div style={{
+                width: '80px',
+                height: '80px',
+                margin: '0 auto 24px',
+                borderRadius: '24px',
+                background: dark 
+                  ? 'linear-gradient(45deg, rgba(168, 85, 247, 0.2), rgba(139, 92, 246, 0.2))'
+                  : 'linear-gradient(45deg, rgba(168, 85, 247, 0.1), rgba(139, 92, 246, 0.1))',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '40px',
+                border: dark 
+                  ? '2px solid rgba(168, 85, 247, 0.3)' 
+                  : '2px solid rgba(168, 85, 247, 0.2)',
+                boxShadow: '0 8px 32px rgba(168, 85, 247, 0.2)'
+              }}>
+                🔐
+              </div>
+              
+              {/* Title */}
+              <div style={{ 
+                fontSize: '18px', 
+                fontWeight: '700',
+                marginBottom: '12px',
+                background: dark 
+                  ? 'linear-gradient(45deg, #ffffff, #e0f2fe)'
+                  : 'linear-gradient(45deg, #1e293b, #475569)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text'
+              }}>
+                Welcome to Fundly
+              </div>
+              
+              <div style={{ 
+                fontSize: '14px', 
+                marginBottom: '24px', 
+                opacity: 0.8,
+                lineHeight: '1.5'
+              }}>
+                Connect your Base Account to unlock all features
+              </div>
+              
+              {/* Connection Status Card */}
+              <div style={{ 
+                margin: '20px 0', 
+                padding: '20px',
+                background: dark 
+                  ? 'linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02))'
+                  : 'linear-gradient(135deg, rgba(0,0,0,0.03), rgba(0,0,0,0.01))',
+                borderRadius: '16px',
+                border: dark 
+                  ? '1px solid rgba(255,255,255,0.1)' 
+                  : '1px solid rgba(0,0,0,0.05)',
+                position: 'relative'
+              }}>
                 <div style={{ 
-                  margin: '20px 0', 
-                  padding: '16px',
-                  background: dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
-                  borderRadius: '12px',
-                  fontSize: '13px'
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center',
+                  gap: '12px',
+                  marginBottom: '12px'
                 }}>
-                  <div style={{ marginBottom: '8px' }}>
-                    {isSignedIn ? '🟢' : '🔴'} <strong>Base Account:</strong> {isSignedIn ? 'Connected ✅' : 'Not connected'} 
-                    <div style={{ fontSize: '11px', opacity: 0.7, marginTop: '2px' }}>
-                      (For everything: pledges, campaigns, transactions)
-                    </div>
+                  <div style={{
+                    width: '12px',
+                    height: '12px',
+                    borderRadius: '50%',
+                    background: '#ef4444',
+                    boxShadow: '0 0 12px rgba(239, 68, 68, 0.5)'
+                  }}></div>
+                  <span style={{ 
+                    fontSize: '14px', 
+                    fontWeight: '600',
+                    color: dark ? '#fff' : '#1e293b'
+                  }}>
+                    Base Account: Not Connected
+                  </span>
+                </div>
+                <div style={{ 
+                  fontSize: '12px', 
+                  opacity: 0.7, 
+                  lineHeight: '1.4'
+                }}>
+                  Required for: campaigns, pledges, transactions
+                </div>
+              </div>
+
+              {/* Sign In Button */}
+              <div style={{ marginBottom: '20px' }}>
+                <SignInWithBaseButton 
+                  align="center"
+                  variant="solid"
+                  colorScheme={theme}
+                  size="medium"
+                  onClick={handleSignIn}
+                />
+              </div>
+
+              {/* Features List */}
+              <div style={{
+                padding: '16px',
+                background: dark 
+                  ? 'linear-gradient(135deg, rgba(59, 130, 246, 0.08), rgba(59, 130, 246, 0.03))'
+                  : 'linear-gradient(135deg, rgba(59, 130, 246, 0.05), rgba(59, 130, 246, 0.02))',
+                borderRadius: '12px',
+                textAlign: 'left',
+                border: dark 
+                  ? '1px solid rgba(59, 130, 246, 0.2)' 
+                  : '1px solid rgba(59, 130, 246, 0.1)'
+              }}>
+                <div style={{ 
+                  fontSize: '13px', 
+                  fontWeight: '600',
+                  marginBottom: '12px',
+                  color: dark ? '#93c5fd' : '#3b82f6',
+                  textAlign: 'center'
+                }}>
+                  💡 What you can do:
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px' }}>
+                    <span>🚀</span>
+                    <span>Create & manage campaigns</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px' }}>
+                    <span>💰</span>
+                    <span>Make instant USDC pledges</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px' }}>
+                    <span>📊</span>
+                    <span>Track your contributions</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px' }}>
+                    <span>⚡</span>
+                    <span>One-click transactions</span>
                   </div>
                 </div>
-
-                {/* Sign In Button */}
-                {!isSignedIn && (
-                  <div style={{ marginBottom: '16px' }}>
-                    <SignInWithBaseButton 
-                      align="center"
-                      variant="solid"
-                      colorScheme={theme}
-                      size="medium"
-                      onClick={handleSignIn}
-                    />
-                  </div>
-                )}
-
-                {/* Connection Instructions */}
-                {!isSignedIn && (
-                  <div style={{ 
-                    padding: '12px',
-                    background: dark ? 'rgba(59, 130, 246, 0.1)' : 'rgba(59, 130, 246, 0.1)',
-                    borderRadius: '8px',
-                    fontSize: '12px',
-                    color: dark ? '#93c5fd' : '#3b82f6'
-                  }}>
-                    💡 <strong>Start here:</strong> Sign in with Base Account to create campaigns and make instant USDC pledges!
-                  </div>
-                )}
               </div>
             </div>
           )}
