@@ -6,6 +6,7 @@ import { base } from 'viem/chains';
 import { createBaseAccountSDK } from '@base-org/account';
 import { CONTRACT_CONFIG, getContractAddress } from '../contracts/contract-config';
 import contractAbi from '../contracts/CrowdfundingPlatform.abi.json';
+import { getCampaignMetadata } from '../lib/firebase';
 
 const CampaignManager = ({ onCampaignsUpdate }) => {
   console.log('🚀🚀🚀 CampaignManager COMPONENT LOADED!!! 🚀🚀🚀');
@@ -278,14 +279,14 @@ const CampaignManager = ({ onCampaignsUpdate }) => {
     }, 3000);
   };
 
-  // Helper function to fetch single campaign FAST (EXACTLY like UserDashboard)
+  // Helper function to fetch single campaign FAST with Firebase metadata integration
   const fetchSingleCampaignFast = async (campaignId) => {
     const campaignStart = Date.now();
-    console.log(`🚀 Starting FAST fetch for campaign ${campaignId} - EXACT COPY OF UserDashboard...`);
+    console.log(`🚀 Starting FAST fetch for campaign ${campaignId} with Firebase metadata...`);
     
     try {
-      // EXACT COPY OF UserDashboard method - use wagmi readContract
-      console.log(`📋 Fetching campaign ${campaignId} EXACTLY like UserDashboard`);
+      // Fetch blockchain data using wagmi readContract
+      console.log(`📋 Fetching campaign ${campaignId} from blockchain...`);
       const campaignData = await readContract(config, {
         address: getContractAddress(targetChainId), // Use targetChainId not chainId
         abi: contractAbi,
@@ -294,16 +295,22 @@ const CampaignManager = ({ onCampaignsUpdate }) => {
         chainId: targetChainId, // Force Base Mainnet
       });
 
-      // EXACT COPY: Convert contract data to frontend format (like UserDashboard)
+      // Convert contract data to frontend format
       const now = Math.floor(Date.now() / 1000);
       const deadline = Number(campaignData.deadline);
       const daysLeft = deadline > now ? Math.ceil((deadline - now) / (24 * 60 * 60)) : 0;
+      
+      // Fetch metadata from Firebase in parallel
+      console.log(`🔥 Fetching Firebase metadata for campaign ${campaignId}...`);
+      const metadata = await getCampaignMetadata(campaignId);
+      console.log(`🔥 Firebase metadata for campaign ${campaignId}:`, metadata);
       
       const campaign = {
         id: Number(campaignId),
         title: campaignData.name,
         description: campaignData.description,
-        image: "https://images.unsplash.com/photo-1559526324-4b87b5e36e44?w=400&h=300&fit=crop", // Default image
+        // Use Firebase image if available, otherwise default
+        image: metadata?.image_blob_url || "https://images.unsplash.com/photo-1559526324-4b87b5e36e44?w=400&h=300&fit=crop",
         creator: campaignData.creator,
         raised: Number(campaignData.totalPledged) / 1000000, // Convert from wei to USDC
         goal: Number(campaignData.goal) / 1000000, // Convert from wei to USDC
@@ -313,12 +320,26 @@ const CampaignManager = ({ onCampaignsUpdate }) => {
         status: campaignData.cancelled ? "Cancelled" : 
                 campaignData.claimed ? "Completed - Funded" :
                 campaignData.goalReached ? "Nearly Funded" : 
-                daysLeft > 0 ? "Active" : "Completed - Unfunded"
+                daysLeft > 0 ? "Active" : "Completed - Unfunded",
+        // Add metadata fields for display
+        metadata: metadata ? {
+          twitterUrl: metadata.twitter_url,
+          websiteUrl: metadata.website_url,
+          extendedDescription: metadata.extended_description,
+          imageUrl: metadata.image_blob_url
+        } : null
       };
       
       const campaignEnd = Date.now();
       console.log(`🚀 FAST Campaign ${campaignId} fetch complete in ${campaignEnd - campaignStart}ms`);
-      console.log(`🚀 FAST Campaign result:`, { id: campaign.id, title: campaign.title, raised: campaign.raised, status: campaign.status });
+      console.log(`🚀 FAST Campaign result:`, { 
+        id: campaign.id, 
+        title: campaign.title, 
+        raised: campaign.raised, 
+        status: campaign.status,
+        hasMetadata: !!metadata,
+        hasCustomImage: !!metadata?.image_blob_url
+      });
       
       return campaign;
     } catch (error) {

@@ -804,9 +804,12 @@ function App() {
       addToast('Campaign updated successfully! 🎉', 'success');
       setShowEditModal(false);
       
-      // Refresh campaign data to show changes
+      // Force immediate refresh of campaign data to show new metadata and images
+      addToast('Refreshing campaign feed with new data...', 'info');
       if (campaignData.refetch) {
-        campaignData.refetch();
+        // Force refetch immediately to show updated metadata
+        await campaignData.refetch();
+        addToast('✅ Campaign feed updated with new images and links!', 'success');
       }
     } catch (error) {
       console.error('Error saving campaign metadata:', error);
@@ -1445,6 +1448,61 @@ function App() {
                           }}>
                             by {campaign.creator}
                           </div>
+                          
+                          {/* Social Media Links */}
+                          {campaign.metadata && (campaign.metadata.twitterUrl || campaign.metadata.websiteUrl) && (
+                            <div style={{ 
+                              display: 'flex', 
+                              gap: '8px', 
+                              marginTop: '8px',
+                              alignItems: 'center'
+                            }}>
+                              {campaign.metadata.twitterUrl && (
+                                <a 
+                                  href={campaign.metadata.twitterUrl} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  style={{
+                                    padding: '4px 8px',
+                                    backgroundColor: '#1da1f2',
+                                    color: 'white',
+                                    borderRadius: '8px',
+                                    fontSize: '11px',
+                                    fontWeight: 'bold',
+                                    textDecoration: 'none',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '4px'
+                                  }}
+                                  onClick={(e) => e.stopPropagation()} // Prevent card click
+                                >
+                                  🐦 Twitter
+                                </a>
+                              )}
+                              {campaign.metadata.websiteUrl && (
+                                <a 
+                                  href={campaign.metadata.websiteUrl} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  style={{
+                                    padding: '4px 8px',
+                                    backgroundColor: '#10b981',
+                                    color: 'white',
+                                    borderRadius: '8px',
+                                    fontSize: '11px',
+                                    fontWeight: 'bold',
+                                    textDecoration: 'none',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '4px'
+                                  }}
+                                  onClick={(e) => e.stopPropagation()} // Prevent card click
+                                >
+                                  🌐 Website
+                                </a>
+                              )}
+                            </div>
+                          )}
                         </div>
                         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                           <span style={{
@@ -1481,6 +1539,22 @@ function App() {
                       }}>
                         {campaign.description}
                       </p>
+                      
+                      {/* Extended Description if available */}
+                      {campaign.metadata?.extendedDescription && (
+                        <div style={{ 
+                          fontSize: '13px', 
+                          opacity: 0.7, 
+                          marginBottom: '16px',
+                          padding: '12px',
+                          backgroundColor: dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
+                          borderRadius: '8px',
+                          borderLeft: `3px solid #2563eb`
+                        }}>
+                          <strong>📝 More Details:</strong><br/>
+                          {campaign.metadata.extendedDescription}
+                        </div>
+                      )}
                       
                       <div style={{ fontSize: '13px', opacity: 0.7, marginBottom: '16px' }}>
                         by {campaign.creator}
