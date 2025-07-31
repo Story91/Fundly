@@ -326,7 +326,9 @@ const CampaignManager = ({ onCampaignsUpdate }) => {
           twitterUrl: metadata.twitter_url,
           websiteUrl: metadata.website_url,
           extendedDescription: metadata.extended_description,
-          imageUrl: metadata.image_blob_url
+          imageUrl: metadata.image_blob_url,
+          additionalImages: metadata.additional_images || [],
+          creatorNick: metadata.creator_nick || ''
         } : null
       };
       

@@ -23,7 +23,9 @@ export async function updateCampaignMetadata(blockchainId, {
   twitterUrl, 
   websiteUrl, 
   extendedDescription,
-  imageBlobUrl 
+  imageBlobUrl,
+  additionalImages = [],
+  creatorNick = ''
 }) {
   try {
     // Można zmienić nazwę kolekcji dla różnych aplikacji
@@ -36,6 +38,8 @@ export async function updateCampaignMetadata(blockchainId, {
       website_url: websiteUrl || '',
       extended_description: extendedDescription || '',
       image_blob_url: imageBlobUrl || '',
+      additional_images: additionalImages || [],
+      creator_nick: creatorNick || '',
       updated_at: new Date().toISOString()
     };
 
@@ -73,7 +77,9 @@ export async function getCampaignMetadata(blockchainId) {
         twitter_url: data.twitter_url,
         website_url: data.website_url,
         extended_description: data.extended_description,
-        image_blob_url: data.image_blob_url
+        image_blob_url: data.image_blob_url,
+        additional_images: data.additional_images || [],
+        creator_nick: data.creator_nick || ''
       };
     } else {
       console.log('No metadata found for campaign:', blockchainId, 'in collection:', collectionName, 'in (default) database');

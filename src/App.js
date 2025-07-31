@@ -51,6 +51,9 @@ function App() {
 
   // Crowdfunding states
   const [selectedAmounts, setSelectedAmounts] = useState({});
+  
+  // Image gallery states - tracks which image is currently displayed for each campaign
+  const [selectedImages, setSelectedImages] = useState({}); // campaignId -> imageUrl
 
   // Toast notification system
   const [toasts, setToasts] = useState([]);
@@ -85,7 +88,9 @@ function App() {
     twitterUrl: '',
     websiteUrl: '',
     extendedDescription: '',
-    imageUrl: ''
+    imageUrl: '',
+    additionalImages: [], // Array of additional image URLs (max 3)
+    creatorNick: '' // Creator nickname
   });
   const [isLoadingMetadata, setIsLoadingMetadata] = useState(false);
   const [isSavingMetadata, setIsSavingMetadata] = useState(false);
@@ -202,6 +207,17 @@ function App() {
     .sort((a, b) => b.backers - a.backers)
     .slice(0, 3);
 
+  // Calculate real platform statistics
+  const platformStats = {
+    totalRaised: finalCampaigns.reduce((sum, campaign) => sum + campaign.raised, 0),
+    totalCampaigns: finalCampaigns.length,
+    activeCampaigns: finalCampaigns.filter(c => c.status === 'Active').length,
+    totalBackers: finalCampaigns.reduce((sum, campaign) => sum + campaign.backers, 0),
+    successfulCampaigns: finalCampaigns.filter(c => c.status === 'Completed - Funded').length,
+    successRate: finalCampaigns.length > 0 ? 
+      Math.round((finalCampaigns.filter(c => c.status === 'Completed - Funded').length / finalCampaigns.length) * 100) : 0
+  };
+
   // Handle sign in
   const handleSignIn = async () => {
     try {
@@ -284,6 +300,16 @@ function App() {
   // Get selected amount for campaign (default to 1 USDC)
   const getAmountForCampaign = (campaignId) => {
     return selectedAmounts[campaignId] || '1';
+  };
+
+  // Get currently selected image for campaign (main image by default)
+  const getSelectedImageForCampaign = (campaign) => {
+    return selectedImages[campaign.id] || campaign.image;
+  };
+
+  // Set selected image for campaign
+  const setSelectedImageForCampaign = (campaignId, imageUrl) => {
+    setSelectedImages(prev => ({ ...prev, [campaignId]: imageUrl }));
   };
 
   // OLD 3-step version (keeping for reference)
@@ -505,16 +531,11 @@ function App() {
     }
   };
 
-  // BasePay = Direct pledge to campaign (no faucet!)
+  // BasePay = Direct pledge to campaign (can work without prior login!)
   const handleBasePay = async (campaign) => {
-    if (!isSignedIn) {
-      alert('Please sign in with Base Account first to pledge');
-      return;
-    }
-
-    if (!universalAddress) {
-      alert('Base Account address not found. Please try signing in again.');
-      return;
+    // If not signed in, BasePay will handle the login process
+    if (!isSignedIn || !universalAddress) {
+      addToast('🔐 BasePay will handle login and pledge together...', 'info');
     }
 
     try {
@@ -528,7 +549,17 @@ function App() {
       
       addToast(`🎯 Pledging ${selectedAmount} USDC to "${campaign.title}" via BasePay...`, 'info');
       
-      // FORCE Base Mainnet network first!
+      // Get or connect account (this will trigger login if needed)
+      let currentAddress = universalAddress;
+      if (!currentAddress) {
+        const accounts = await provider.request({ method: 'eth_requestAccounts' });
+        currentAddress = accounts[0];
+        setUniversalAddress(currentAddress);
+        setIsSignedIn(true);
+        addToast('✅ Connected via BasePay!', 'success');
+      }
+      
+      // FORCE Base Mainnet network
       try {
         await provider.request({
           method: 'wallet_switchEthereumChain',
@@ -549,8 +580,6 @@ function App() {
         }
       }
       
-      await provider.request({ method: 'eth_requestAccounts' });
-      
       // Check current allowance first
       addToast(`🔍 Checking USDC allowance...`, 'info');
       
@@ -565,7 +594,7 @@ function App() {
           outputs: [{ name: '', type: 'uint256' }]
         }],
         functionName: 'allowance',
-        args: [universalAddress, PLATFORM_ADDRESS]
+        args: [currentAddress, PLATFORM_ADDRESS]
       });
       
       const allowanceResult = await provider.request({
@@ -602,7 +631,7 @@ function App() {
         await provider.request({
           method: 'eth_sendTransaction',
           params: [{
-            from: universalAddress,
+            from: currentAddress,
             to: USDC_ADDRESS,
             data: approveData,
             gas: '0x15f90',
@@ -625,7 +654,7 @@ function App() {
       const pledgeTx = await provider.request({
         method: 'eth_sendTransaction',
         params: [{
-          from: universalAddress,
+          from: currentAddress,
           to: PLATFORM_ADDRESS,
           data: pledgeData,
           gas: '0x76c0',
@@ -735,7 +764,9 @@ function App() {
           twitterUrl: metadata.twitter_url || '',
           websiteUrl: metadata.website_url || '',
           extendedDescription: metadata.extended_description || '',
-          imageUrl: metadata.image_url || metadata.image_blob_url || ''
+          imageUrl: metadata.image_url || metadata.image_blob_url || '',
+          additionalImages: metadata.additional_images || [],
+          creatorNick: metadata.creator_nick || ''
         });
       } else {
         // Reset form if no metadata found
@@ -743,7 +774,9 @@ function App() {
           twitterUrl: '',
           websiteUrl: '',
           extendedDescription: '',
-          imageUrl: ''
+          imageUrl: '',
+          additionalImages: [],
+          creatorNick: ''
         });
       }
     } catch (error) {
@@ -753,7 +786,9 @@ function App() {
         twitterUrl: '',
         websiteUrl: '',
         extendedDescription: '',
-        imageUrl: ''
+        imageUrl: '',
+        additionalImages: [],
+        creatorNick: ''
       });
     } finally {
       setIsLoadingMetadata(false);
@@ -788,6 +823,44 @@ function App() {
     }
   };
 
+  // Handle additional image upload
+  const handleAdditionalImageUpload = async (file) => {
+    if (!file || !editingCampaign) return;
+    if (editFormData.additionalImages.length >= 3) {
+      addToast('Maximum 3 additional images allowed', 'error');
+      return;
+    }
+
+    setIsUploadingImage(true);
+    try {
+      // Upload using our upload utility with unique suffix
+      const timestamp = Date.now();
+      const result = await uploadImageToBlob(file, `${editingCampaign.id}-additional-${timestamp}`);
+      
+      // Add to additional images array
+      setEditFormData(prev => ({
+        ...prev,
+        additionalImages: [...prev.additionalImages, result.url]
+      }));
+
+      addToast('Additional image uploaded! 📸', 'success');
+    } catch (error) {
+      console.error('Error uploading additional image:', error);
+      addToast('Failed to upload additional image', 'error');
+    } finally {
+      setIsUploadingImage(false);
+    }
+  };
+
+  // Remove additional image
+  const removeAdditionalImage = (index) => {
+    setEditFormData(prev => ({
+      ...prev,
+      additionalImages: prev.additionalImages.filter((_, i) => i !== index)
+    }));
+    addToast('Image removed', 'info');
+  };
+
   // Handle saving campaign metadata
   const handleSaveCampaignMetadata = async () => {
     if (!editingCampaign) return;
@@ -798,7 +871,9 @@ function App() {
         twitterUrl: editFormData.twitterUrl,
         websiteUrl: editFormData.websiteUrl,
         extendedDescription: editFormData.extendedDescription,
-        imageBlobUrl: editFormData.imageUrl // Save to image_blob_url column for Vercel Blob URLs
+        imageBlobUrl: editFormData.imageUrl, // Save to image_blob_url column for Vercel Blob URLs
+        additionalImages: editFormData.additionalImages, // Save additional images array
+        creatorNick: editFormData.creatorNick // Save creator nickname
       });
       
       addToast('Campaign updated successfully! 🎉', 'success');
@@ -935,12 +1010,76 @@ function App() {
       {/* Toast notifications */}
       <ToastContainer toasts={toasts} removeToast={removeToast} />
       
-      {/* CSS for loading animation */}
+      {/* CSS for animations */}
       <style>
         {`
           @keyframes spin {
             from { transform: rotate(0deg); }
             to { transform: rotate(360deg); }
+          }
+          
+          @keyframes gradientAnimation {
+            0%, 100% { 
+              background-position: 0% 50%; 
+            }
+            50% { 
+              background-position: 100% 50%; 
+            }
+          }
+          
+          @keyframes gradientBorder {
+            0% { 
+              background-position: 0% 50%; 
+            }
+            50% { 
+              background-position: 100% 50%; 
+            }
+            100% { 
+              background-position: 0% 50%; 
+            }
+          }
+          
+          .campaign-card {
+            position: relative;
+            background: ${dark 
+              ? 'rgba(255,255,255,0.08)' 
+              : 'rgba(255, 255, 255, 0.9)'};
+            backdrop-filter: blur(20px);
+            transition: all 0.4s ease;
+            border-radius: 20px;
+            border: 1px solid ${dark 
+              ? 'rgba(255,255,255,0.1)' 
+              : 'rgba(148, 163, 184, 0.2)'};
+          }
+          
+          .campaign-card::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            background: linear-gradient(45deg, #ff006e, #fb5607, #ffbe0b, #8338ec, #3a86ff, #ff006e);
+            background-size: 600% 600%;
+            z-index: -1;
+            border-radius: 22px;
+            opacity: 0;
+            animation: gradientBorder 3s ease infinite;
+            transition: opacity 0.3s ease;
+          }
+          
+          .campaign-card:hover::before {
+            opacity: 0.8;
+          }
+          
+          .campaign-card:hover {
+            transform: translateY(-8px);
+            box-shadow: ${dark 
+              ? '0 30px 80px rgba(0,0,0,0.3)' 
+              : '0 30px 80px rgba(0,0,0,0.15)'};
+            background: ${dark 
+              ? 'rgba(255,255,255,0.12)' 
+              : 'rgba(255, 255, 255, 0.95)'};
           }
         `}
       </style>
@@ -1315,32 +1454,7 @@ function App() {
             </div>
           )}
 
-          {/* Info Banner for all users about campaign types */}
-          {!isSignedIn && (
-            <div style={{
-              ...styles.card,
-              padding: '20px',
-              textAlign: 'center',
-              marginBottom: '20px',
-              background: dark 
-                ? 'linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(16, 185, 129, 0.1))'
-                : 'linear-gradient(135deg, rgba(34, 197, 94, 0.05), rgba(16, 185, 129, 0.05))',
-              border: `1px solid ${dark ? 'rgba(34, 197, 94, 0.3)' : 'rgba(34, 197, 94, 0.2)'}`,
-              borderRadius: '16px'
-            }}>
-              <div style={{ fontSize: '16px', marginBottom: '12px' }}>
-                🚀 <strong>Live Campaigns</strong>
-              </div>
-              <div style={{ fontSize: '14px', marginBottom: '16px', opacity: 0.8, lineHeight: '1.5' }}>
-                You're viewing <strong>real campaigns from Base blockchain</strong> + demo examples. 
-                <br />
-                <strong>Sign in with Base Account</strong> to create campaigns and make pledges!
-              </div>
-              <div style={{ fontSize: '12px', opacity: 0.7 }}>
-                💰 BasePay pledging requires login
-              </div>
-            </div>
-          )}
+
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%', maxWidth: '900px' }}>
             
@@ -1395,17 +1509,18 @@ function App() {
 
             {/* Campaigns list */}
             {filteredCampaigns.map(campaign => (
-              <div key={campaign.id} style={{
-                ...styles.card,
-                overflow: 'hidden',
-                transition: 'all 0.3s ease',
-                cursor: 'pointer',
-                position: 'relative',
-                '&:hover': {
-                  transform: 'translateY(-4px)',
-                  boxShadow: dark ? '0 25px 80px rgba(0,0,0,0.2)' : '0 25px 80px rgba(0,0,0,0.1)'
-                }
-              }}>
+              <div 
+                key={campaign.id} 
+                className="campaign-card"
+                style={{
+                  padding: '24px',
+                  marginBottom: '20px',
+                  overflow: 'hidden',
+                  cursor: 'pointer',
+                  position: 'relative',
+                  boxShadow: dark ? '0 20px 60px rgba(0,0,0,0.1)' : '0 20px 60px rgba(0,0,0,0.05)'
+                }}
+              >
                 {/* Fundly Logo Watermark */}
                 <img 
                   src="/logo512.png" 
@@ -1422,17 +1537,78 @@ function App() {
                   }} 
                 />
                 <div style={{ display: 'flex', gap: '24px', alignItems: 'stretch' }}>
-                  <img 
-                    src={campaign.image} 
-                    alt={campaign.title}
-                    style={{
-                      width: '200px',
-                      height: '140px',
-                      borderRadius: '16px',
-                      objectFit: 'cover',
-                      flexShrink: 0
-                    }}
-                  />
+                  <div style={{ flexShrink: 0 }}>
+                    {/* Main Image */}
+                    <img 
+                      src={getSelectedImageForCampaign(campaign)} 
+                      alt={campaign.title}
+                      style={{
+                        width: '200px',
+                        height: '140px',
+                        borderRadius: '16px',
+                        objectFit: 'cover',
+                        cursor: 'pointer'
+                      }}
+                      onClick={() => {
+                        // Reset to main image when clicked
+                        setSelectedImageForCampaign(campaign.id, campaign.image);
+                      }}
+                    />
+                    
+                    {/* Additional Images Thumbnails - only show if signed in and has additional images */}
+                    {isSignedIn && campaign.metadata?.additionalImages && campaign.metadata.additionalImages.length > 0 && (
+                      <div style={{ 
+                        display: 'flex', 
+                        gap: '8px', 
+                        marginTop: '8px',
+                        justifyContent: 'flex-start'
+                      }}>
+                        {/* Main image thumbnail */}
+                        <img 
+                          src={campaign.image} 
+                          alt="Main"
+                          style={{
+                            width: '40px',
+                            height: '40px',
+                            borderRadius: '8px',
+                            objectFit: 'cover',
+                            cursor: 'pointer',
+                            border: getSelectedImageForCampaign(campaign) === campaign.image ? 
+                              '2px solid #2563eb' : `1px solid ${dark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)'}`,
+                            opacity: getSelectedImageForCampaign(campaign) === campaign.image ? 1 : 0.7,
+                            transition: 'all 0.2s ease'
+                          }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedImageForCampaign(campaign.id, campaign.image);
+                          }}
+                        />
+                        {/* Additional images thumbnails */}
+                        {campaign.metadata.additionalImages.slice(0, 3).map((imageUrl, index) => (
+                          <img 
+                            key={index}
+                            src={imageUrl} 
+                            alt={`View ${index + 2}`}
+                            style={{
+                              width: '40px',
+                              height: '40px',
+                              borderRadius: '8px',
+                              objectFit: 'cover',
+                              cursor: 'pointer',
+                              border: getSelectedImageForCampaign(campaign) === imageUrl ? 
+                                '2px solid #2563eb' : `1px solid ${dark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)'}`,
+                              opacity: getSelectedImageForCampaign(campaign) === imageUrl ? 1 : 0.7,
+                              transition: 'all 0.2s ease'
+                            }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedImageForCampaign(campaign.id, imageUrl);
+                            }}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
                   <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                     <div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '12px' }}>
@@ -1446,7 +1622,7 @@ function App() {
                             marginTop: '4px',
                             fontStyle: 'italic'
                           }}>
-                            by {campaign.creator}
+                            by {campaign.metadata?.creatorNick || campaign.creator}
                           </div>
                           
                           {/* Social Media Links */}
@@ -1555,10 +1731,6 @@ function App() {
                           {campaign.metadata.extendedDescription}
                         </div>
                       )}
-                      
-                      <div style={{ fontSize: '13px', opacity: 0.7, marginBottom: '16px' }}>
-                        by {campaign.creator}
-                      </div>
                     </div>
 
                     {/* Progress Bar */}
@@ -1685,89 +1857,353 @@ function App() {
             <div key={campaign.id} style={{
               ...styles.card,
               padding: '16px',
-              cursor: 'pointer'
+              cursor: 'pointer',
+              transition: 'all 0.3s ease',
+              overflow: 'hidden'
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.transform = 'translateY(-2px)';
+              e.target.style.boxShadow = dark ? '0 20px 40px rgba(0,0,0,0.2)' : '0 20px 40px rgba(0,0,0,0.1)';
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.transform = 'translateY(0)';
+              e.target.style.boxShadow = dark ? '0 20px 60px rgba(0,0,0,0.1)' : '0 20px 60px rgba(0,0,0,0.05)';
             }}>
-              <div style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '8px' }}>
-                {campaign.title}
-              </div>
-              <div style={{ fontSize: '12px', opacity: 0.7, marginBottom: '8px' }}>
-                by {campaign.creator}
-              </div>
-              <div style={{ fontSize: '12px' }}>
-                <div style={{ color: '#28a745', fontWeight: 'bold' }}>
-                  ${campaign.raised.toLocaleString()} raised
+              {/* Campaign Image */}
+              <div style={{
+                width: '100%',
+                height: '120px',
+                borderRadius: '12px',
+                overflow: 'hidden',
+                marginBottom: '12px',
+                position: 'relative'
+              }}>
+                <img 
+                  src={campaign.image} 
+                  alt={campaign.title}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover'
+                  }}
+                  onError={(e) => {
+                    e.target.src = "https://images.unsplash.com/photo-1559526324-4b87b5e36e44?w=400&h=300&fit=crop";
+                  }}
+                />
+                {/* Progress overlay */}
+                <div style={{
+                  position: 'absolute',
+                  bottom: '8px',
+                  left: '8px',
+                  right: '8px',
+                  height: '4px',
+                  backgroundColor: 'rgba(0,0,0,0.3)',
+                  borderRadius: '2px',
+                  overflow: 'hidden'
+                }}>
+                  <div style={{
+                    width: `${Math.min((campaign.raised / campaign.goal) * 100, 100)}%`,
+                    height: '100%',
+                    backgroundColor: '#10b981',
+                    borderRadius: '2px'
+                  }} />
                 </div>
-                <div style={{ opacity: 0.7 }}>
-                  👥 {campaign.backers} backers
+              </div>
+
+              {/* Campaign Content */}
+              <div>
+                <div style={{ 
+                  fontSize: '14px', 
+                  fontWeight: 'bold', 
+                  marginBottom: '6px',
+                  lineHeight: '1.3',
+                  display: '-webkit-box',
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: 'vertical',
+                  overflow: 'hidden'
+                }}>
+                  {campaign.title}
+                </div>
+                <div style={{ 
+                  fontSize: '11px', 
+                  opacity: 0.7, 
+                  marginBottom: '12px',
+                  fontStyle: 'italic'
+                }}>
+                  by {campaign.metadata?.creatorNick || campaign.creator}
+                </div>
+                
+                {/* Stats */}
+                <div style={{ 
+                  display: 'grid', 
+                  gridTemplateColumns: '1fr 1fr', 
+                  gap: '8px',
+                  fontSize: '12px'
+                }}>
+                  <div>
+                    <div style={{ color: '#10b981', fontWeight: 'bold', fontSize: '13px' }}>
+                      ${campaign.raised.toLocaleString()}
+                    </div>
+                    <div style={{ opacity: 0.7, fontSize: '10px' }}>
+                      raised
+                    </div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ color: '#3b82f6', fontWeight: 'bold', fontSize: '13px' }}>
+                      {campaign.backers}
+                    </div>
+                    <div style={{ opacity: 0.7, fontSize: '10px' }}>
+                      backers
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
           ))}
           
           <div style={{ ...styles.card, marginTop: '30px' }}>
-            <h4 style={{ marginTop: 0, fontSize: '16px' }}>📊 Platform Stats</h4>
-            <div style={{ fontSize: '12px', lineHeight: '1.6' }}>
-              <div>💰 Total Raised: $2.4M</div>
-              <div>🎯 Campaigns: 1,234</div>
-              <div>👥 Active Users: 45,678</div>
-              <div>✅ Success Rate: 78%</div>
-            </div>
+            <h4 style={{ 
+              marginTop: 0, 
+              fontSize: '16px', 
+              marginBottom: '16px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}>
+              📊 Live Platform Stats
+            </h4>
+            
+            {campaignData.loading ? (
+              <div style={{ 
+                textAlign: 'center', 
+                padding: '20px 0',
+                fontSize: '12px',
+                opacity: 0.7
+              }}>
+                📊 Loading real stats...
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {/* Total Raised */}
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: '8px 0',
+                  borderBottom: `1px solid ${dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`
+                }}>
+                  <div style={{ fontSize: '12px', opacity: 0.8 }}>💰 Total Raised</div>
+                  <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#10b981' }}>
+                    ${platformStats.totalRaised.toLocaleString()}
+                  </div>
+                </div>
+
+                {/* Campaigns */}
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: '8px 0',
+                  borderBottom: `1px solid ${dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`
+                }}>
+                  <div style={{ fontSize: '12px', opacity: 0.8 }}>🎯 Total Campaigns</div>
+                  <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#3b82f6' }}>
+                    {platformStats.totalCampaigns}
+                  </div>
+                </div>
+
+                {/* Active Campaigns */}
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: '8px 0',
+                  borderBottom: `1px solid ${dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`
+                }}>
+                  <div style={{ fontSize: '12px', opacity: 0.8 }}>🚀 Active Now</div>
+                  <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#f59e0b' }}>
+                    {platformStats.activeCampaigns}
+                  </div>
+                </div>
+
+                {/* Total Backers */}
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: '8px 0',
+                  borderBottom: `1px solid ${dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`
+                }}>
+                  <div style={{ fontSize: '12px', opacity: 0.8 }}>👥 Total Backers</div>
+                  <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#8b5cf6' }}>
+                    {platformStats.totalBackers}
+                  </div>
+                </div>
+
+                {/* Success Rate */}
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: '8px 0'
+                }}>
+                  <div style={{ fontSize: '12px', opacity: 0.8 }}>✅ Success Rate</div>
+                  <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#22c55e' }}>
+                    {platformStats.successRate}%
+                  </div>
+                </div>
+
+                {/* Live indicator */}
+                <div style={{
+                  marginTop: '8px',
+                  padding: '8px 12px',
+                  backgroundColor: dark ? 'rgba(34, 197, 94, 0.1)' : 'rgba(34, 197, 94, 0.1)',
+                  borderRadius: '6px',
+                  textAlign: 'center',
+                  fontSize: '11px',
+                  color: '#22c55e',
+                  fontWeight: '600'
+                }}>
+                  🟢 Live from Base Mainnet
+                </div>
+              </div>
+            )}
           </div>
 
           <div style={{ ...styles.card, marginTop: '20px' }}>
-            <h4 style={{ marginTop: 0, fontSize: '16px' }}>🔒 Smart Contract</h4>
-            <div style={{ fontSize: '12px', lineHeight: '1.6', marginBottom: '12px' }}>
-              <div style={{ marginBottom: '8px' }}>
-                <span style={{ color: '#22c55e', fontWeight: 'bold' }}>✅ Verified Contract</span>
-              </div>
-              <div style={{ marginBottom: '4px' }}>
-                📜 <strong>CrowdfundingEscrow</strong>
-              </div>
-              <div style={{ marginBottom: '4px' }}>
-                🌐 <strong>Base Mainnet</strong>
-              </div>
-              <div style={{ marginBottom: '8px' }}>
-                🔗 <strong>BaseScan Verified</strong>
+            <h4 style={{ 
+              marginTop: 0, 
+              fontSize: '16px', 
+              marginBottom: '16px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}>
+              🔒 Smart Contract
+            </h4>
+            
+            {/* Verification Status */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              marginBottom: '16px',
+              padding: '8px 12px',
+              backgroundColor: dark ? 'rgba(34, 197, 94, 0.1)' : 'rgba(34, 197, 94, 0.1)',
+              borderRadius: '8px',
+              border: `1px solid ${dark ? 'rgba(34, 197, 94, 0.2)' : 'rgba(34, 197, 94, 0.3)'}`
+            }}>
+              <div style={{ fontSize: '12px', color: '#22c55e', fontWeight: 'bold' }}>
+                ✅ Verified & Deployed
               </div>
             </div>
-            <div 
-              onClick={() => {
-                navigator.clipboard.writeText('0xef0B17afD2089Cc34b68F48B892922b113FedcE2');
-                addToast('📋 Contract address copied!', 'success');
-              }}
-              style={{ 
-                fontSize: '10px', 
-                opacity: 0.8,
-                padding: '8px',
-                backgroundColor: dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
-                borderRadius: '6px',
-                cursor: 'pointer',
-                wordBreak: 'break-all',
-                lineHeight: '1.3',
-                border: `1px dashed ${dark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)'}`,
-                transition: 'all 0.2s ease'
-              }}
-              onMouseOver={(e) => {
-                e.target.style.backgroundColor = dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
-                e.target.style.borderStyle = 'solid';
-              }}
-              onMouseOut={(e) => {
-                e.target.style.backgroundColor = dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
-                e.target.style.borderStyle = 'dashed';
-              }}
-              title="Click to copy contract address"
-            >
-              📋 0xef0B17afD2089Cc34b68F48B892922b113FedcE2
+
+            {/* Contract Details */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '16px' }}>
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                padding: '6px 0',
+                borderBottom: `1px solid ${dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`
+              }}>
+                <div style={{ fontSize: '11px', opacity: 0.8 }}>📜 Contract</div>
+                <div style={{ fontSize: '12px', fontWeight: 'bold' }}>
+                  CrowdfundingEscrow
+                </div>
+              </div>
+
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                padding: '6px 0',
+                borderBottom: `1px solid ${dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`
+              }}>
+                <div style={{ fontSize: '11px', opacity: 0.8 }}>🌐 Network</div>
+                <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#3b82f6' }}>
+                  Base Mainnet
+                </div>
+              </div>
+
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                padding: '6px 0'
+              }}>
+                <div style={{ fontSize: '11px', opacity: 0.8 }}>🔗 Explorer</div>
+                <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#10b981' }}>
+                  BaseScan Verified
+                </div>
+              </div>
             </div>
-            <div style={{ fontSize: '10px', opacity: 0.7, marginTop: '6px', textAlign: 'center' }}>
+
+            {/* Contract Address */}
+            <div style={{ marginBottom: '12px' }}>
+              <div style={{ fontSize: '11px', opacity: 0.8, marginBottom: '6px' }}>
+                📋 Contract Address:
+              </div>
+              <div 
+                onClick={() => {
+                  navigator.clipboard.writeText('0xef0B17afD2089Cc34b68F48B892922b113FedcE2');
+                  addToast('📋 Contract address copied!', 'success');
+                }}
+                style={{ 
+                  fontSize: '10px', 
+                  padding: '10px 12px',
+                  backgroundColor: dark ? 'rgba(59, 130, 246, 0.1)' : 'rgba(59, 130, 246, 0.1)',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  wordBreak: 'break-all',
+                  lineHeight: '1.4',
+                  border: `1px solid ${dark ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.3)'}`,
+                  transition: 'all 0.2s ease',
+                  fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Monaco, Consolas, monospace',
+                  color: '#3b82f6',
+                  fontWeight: '600'
+                }}
+                onMouseOver={(e) => {
+                  e.target.style.backgroundColor = dark ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.15)';
+                  e.target.style.transform = 'scale(1.02)';
+                }}
+                onMouseOut={(e) => {
+                  e.target.style.backgroundColor = dark ? 'rgba(59, 130, 246, 0.1)' : 'rgba(59, 130, 246, 0.1)';
+                  e.target.style.transform = 'scale(1)';
+                }}
+                title="Click to copy contract address"
+              >
+                0xef0B17afD2089Cc34b68F48B892922b113FedcE2
+              </div>
+            </div>
+
+            {/* Action Button */}
+            <div style={{ textAlign: 'center' }}>
               <a 
                 href="https://basescan.org/address/0xef0B17afD2089Cc34b68F48B892922b113FedcE2#code"
                 target="_blank"
                 rel="noopener noreferrer"
                 style={{ 
-                  color: '#2563eb', 
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '8px 16px',
+                  backgroundColor: dark ? 'rgba(37, 99, 235, 0.1)' : 'rgba(37, 99, 235, 0.1)',
+                  color: '#2563eb',
                   textDecoration: 'none',
-                  fontSize: '10px'
+                  borderRadius: '6px',
+                  fontSize: '11px',
+                  fontWeight: '600',
+                  border: `1px solid ${dark ? 'rgba(37, 99, 235, 0.2)' : 'rgba(37, 99, 235, 0.3)'}`,
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.backgroundColor = dark ? 'rgba(37, 99, 235, 0.15)' : 'rgba(37, 99, 235, 0.15)';
+                  e.target.style.transform = 'translateY(-1px)';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.backgroundColor = dark ? 'rgba(37, 99, 235, 0.1)' : 'rgba(37, 99, 235, 0.1)';
+                  e.target.style.transform = 'translateY(0)';
                 }}
               >
                 🔍 View on BaseScan
@@ -2458,11 +2894,116 @@ function App() {
                     opacity: (isUploadingImage || isLoadingMetadata) ? 0.5 : 1
                   }}
                 >
-                  {isUploadingImage ? '🔄 Uploading...' : '📁 Upload Campaign Image'}
+                  {isUploadingImage ? '🔄 Uploading...' : '📁 Upload Main Image'}
                   <div style={{ fontSize: '12px', opacity: 0.8, marginTop: '8px' }}>
-                    {isUploadingImage ? 'Please wait...' : 'Click to select image (JPG, PNG, WebP)'}
+                    {isUploadingImage ? 'Please wait...' : 'Click to select main image (JPG, PNG, WebP)'}
               </div>
                 </label>
+              </div>
+
+              {/* Additional Images Section */}
+              <div style={{ marginBottom: '24px' }}>
+                <label style={{ 
+                  display: 'block', 
+                  marginBottom: '12px', 
+                  fontSize: '16px', 
+                  fontWeight: '600',
+                  color: dark ? '#f1f5f9' : '#1e293b'
+                }}>
+                  🖼️ Additional Images (Max 3)
+                </label>
+                
+                {/* Display existing additional images */}
+                {editFormData.additionalImages.length > 0 && (
+                  <div style={{ 
+                    display: 'flex', 
+                    gap: '12px', 
+                    marginBottom: '16px',
+                    flexWrap: 'wrap'
+                  }}>
+                    {editFormData.additionalImages.map((imageUrl, index) => (
+                      <div key={index} style={{ position: 'relative' }}>
+                        <img 
+                          src={imageUrl} 
+                          alt={`Additional ${index + 1}`}
+                          style={{
+                            width: '100px',
+                            height: '100px',
+                            objectFit: 'cover',
+                            borderRadius: '8px',
+                            border: `1px solid ${dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`
+                          }}
+                        />
+                        <button
+                          onClick={() => removeAdditionalImage(index)}
+                          style={{
+                            position: 'absolute',
+                            top: '-8px',
+                            right: '-8px',
+                            width: '24px',
+                            height: '24px',
+                            borderRadius: '50%',
+                            border: 'none',
+                            backgroundColor: '#ef4444',
+                            color: 'white',
+                            fontSize: '12px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                          }}
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Upload additional images */}
+                {editFormData.additionalImages.length < 3 && (
+                  <>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files[0];
+                        if (file) handleAdditionalImageUpload(file);
+                      }}
+                      disabled={isUploadingImage || isLoadingMetadata}
+                      style={{ display: 'none' }}
+                      id="additionalImageUpload"
+                    />
+                    <label
+                      htmlFor="additionalImageUpload"
+                      style={{
+                        width: '100%',
+                        minHeight: '80px',
+                        padding: '20px',
+                        borderRadius: '12px',
+                        border: `2px dashed ${dark ? 'rgba(59, 130, 246, 0.3)' : 'rgba(59, 130, 246, 0.4)'}`,
+                        backgroundColor: dark ? 'rgba(59, 130, 246, 0.05)' : 'rgba(59, 130, 246, 0.08)',
+                        color: dark ? '#93c5fd' : '#3b82f6',
+                        fontSize: '14px',
+                        fontWeight: '600',
+                        cursor: (isUploadingImage || isLoadingMetadata) ? 'not-allowed' : 'pointer',
+                        transition: 'all 0.3s ease',
+                        display: 'flex', 
+                        flexDirection: 'column',
+                        alignItems: 'center', 
+                        justifyContent: 'center',
+                        textAlign: 'center',
+                        boxSizing: 'border-box',
+                        opacity: (isUploadingImage || isLoadingMetadata) ? 0.5 : 1
+                      }}
+                    >
+                      {isUploadingImage ? '🔄 Uploading...' : '➕ Add Additional Image'}
+                      <div style={{ fontSize: '12px', opacity: 0.8, marginTop: '8px' }}>
+                        {editFormData.additionalImages.length}/3 images added
+                      </div>
+                    </label>
+                  </>
+                )}
               </div>
 
               {/* Social Media Links */}
@@ -2529,6 +3070,46 @@ function App() {
                   />
                     </div>
                   </div>
+
+              {/* Creator Nickname */}
+              <div style={{ marginBottom: '24px' }}>
+                <label style={{ 
+                  display: 'block', 
+                  marginBottom: '12px', 
+                  fontSize: '16px', 
+                  fontWeight: '600',
+                  color: dark ? '#f1f5f9' : '#1e293b'
+                }}>
+                  👤 Creator Nickname (Optional)
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g., @johndoe or John Doe"
+                  value={editFormData.creatorNick}
+                  onChange={(e) => setEditFormData({...editFormData, creatorNick: e.target.value})}
+                  disabled={isLoadingMetadata}
+                  style={{
+                    width: '100%',
+                    padding: '12px 16px',
+                    borderRadius: '12px',
+                    border: `2px solid ${dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
+                    backgroundColor: dark ? 'rgba(255,255,255,0.05)' : '#f8fafc',
+                    color: dark ? '#f1f5f9' : '#1e293b',
+                    fontSize: '14px',
+                    outline: 'none',
+                    boxSizing: 'border-box',
+                    opacity: isLoadingMetadata ? 0.5 : 1
+                  }}
+                />
+                <div style={{ 
+                  fontSize: '12px', 
+                  opacity: 0.7, 
+                  marginTop: '6px',
+                  color: dark ? '#94a3b8' : '#64748b'
+                }}>
+                  This will display instead of wallet address "by {editFormData.creatorNick || '0x...'}"
+                </div>
+              </div>
 
               {/* Extended Description */}
               <div style={{ marginBottom: '32px' }}>
